@@ -70,4 +70,3 @@ class CET_Scenario:
 
     def __str__(self):
         return 'CET_Scenario\nACC Version:\t{}\nFirst Year:\t{}\nMarket Effects:\t{}\nInput Measures:\t{}\nInput Programs:\t{}'.format(self.acc_version, self.first_year, self.market_effects, len(self.InputMeasures.data.index), len(self.InputPrograms.data.index))
-

@@ -48,14 +48,10 @@ def calculate_measure_cost_effectiveness(cet_scenario):
 
     avoided_electric_costs.CET_ID = avoided_electric_costs.CET_ID.map(int)
     avoided_gas_costs.CET_ID = avoided_gas_costs.CET_ID.map(int)
-    
-    #calculate program-level costs:
-    f = lambda r: calculate_program_costs(r, cet_scenario.Settings, cet_scenario.first_year)
-    program_costs = cet_scenario.InputPrograms.data.apply(f, axis='columns')
 
-    f = lambda r: calculate_rebates_and_incentives(r, cet_scenario.Settings, cet_scenario.first_year)
-    rebates_and_incentives = cet_scenario.InputMeasures.data.apply(f, axis='columns')
-    rebates_and_incentives.CET_ID = rebates_and_incentives.CET_ID.map(int)
+    measures = cet_scenario.InputMeasures.data.merge(
+        avoided_electric_costs, on='CET_ID').merge(
+        avoided_gas_costs, on='CET_ID')
 
     if cet_scenario.match_sql:
         benefit_sums = pd.DataFrame({
@@ -68,8 +64,7 @@ def calculate_measure_cost_effectiveness(cet_scenario):
             'GasNet'        : avoided_gas_costs.GasBenNet,
         }).groupby('PrgID').aggregate(np.sum)
     else:
-        nonneg = lambda b: max(b,0)
-        avoided_electric_costs.groupby('PrgID').apply()
+        nonneg = lambda benefit: max(benefit,0)
         benefit_sums = pd.DataFrame({
             'PrgID'         : avoided_electric_costs.PrgID,
             'Qi'            : avoided_electric_costs.Qi,
@@ -78,23 +73,12 @@ def calculate_measure_cost_effectiveness(cet_scenario):
             'ElectricNet'   : avoided_electric_costs.ElecBenNet.map(nonneg),
             'GasGross'      : avoided_gas_costs.GasBenGross.map(nonneg),
             'GasNet'        : avoided_gas_costs.GasBenNet.map(nonneg),
-        }).groupby(by=('PrgID','Qi')).aggregate(np.sum)
+        }).groupby(by=['PrgID','Qi']).aggregate(np.sum)
 
-    program_data = benefit_sums.merge(cet_scenario.InputProgram.data, on=('PrgID','Qi'))
+    programs = cet_scenario.InputPrograms.data.merge(benefit_sums, on=['PrgID','Qi'])
 
-    trc_inputs = pd.concat([
-        cet_scenario.InputMeasures.data,
-        avoided_electric_costs[['ElecBenGross','ElecBenNet']],
-        avoided_gas_costs[['GasBenGross','GasBenNet']],
-        rebates_and_incentives[['NTGRCost','ExcessIncPV','RebatesPV','IncentsAndDIPV','GrossMeasCostPV','MeasureIncCost']]
-    ],axis='columns')
-
-
-    total_resource_cost_gross = 0
-    total_resource_cost_net = 0
-    total_resource_cost_no_admin = 0
-    total_resource_ratio = 0
-    total_resource_ratio_no_admin = 0
+    f = lambda r: aggregation.calculate_total_resource_costs(r, programs, cet_scenario.Settings, cet_scenario.first_year)
+    total_resource_costs = measures.apply(f, axis='columns')
 
     program_administrator_cost_gross = 0
     program_administrator_cost_net = 0
@@ -111,15 +95,13 @@ def calculate_measure_cost_effectiveness(cet_scenario):
     weigted_electric_allocation = 0
     weighted_program_cost =0
 
-    outputs = pd.concat([
-        avoided_electric_costs[['CET_ID','ElecBenGross','ElecBenNet']],
-        avoided_gas_costs[['GasBenGross','GasBenNet']],
-        rebates_and_incentives[['NTGRCost','ExcessIncPV','RebatesPV','IncentsAndDIPV','GrossMeasCostPV','MeasureIncCost']],
-    ],axis='columns')
+    outputs = avoided_electric_costs[['CET_ID','ElecBenGross','ElecBenNet']].merge(
+        avoided_gas_costs[['CET_ID','GasBenGross','GasBenNet']], on='CET_ID').merge(
+        total_resource_costs, on='CET_ID')
 
     return outputs
 
-def calculate_program_cost_efectiveness(cet_scenario):
+def calculate_program_cost_effectiveness(cet_scenario):
     ### parameters:
     ###     cet_scenario : an instance of the CETScenario class containing
     ###         the input data and parameters used in calculating cost
