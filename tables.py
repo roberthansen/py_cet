@@ -1,10 +1,7 @@
 import types
 from models import EDCS_Connection,EDCS_Table,EDCS_Query_Results
 
-user = {
-    'id' : 'robert.hansen',
-    'passwd' : 'apCTQ8CK',
-}
+from login import user
 
 def setup_input_measures(first_year):
     InputMeasures = EDCS_Table('InputMeasure',user['id'],user['passwd'])
@@ -29,8 +26,8 @@ def setup_input_measures(first_year):
 
     # helper function to calculate additional columns for input measure table:
     def input_measure_calculated_columns(data_frame_row):
-        index_year,quarter = list(map(int,data_frame_row.ClaimYearQuarter.split('Q')))
-        quarter_index = 4 * index_year + quarter - 1
+        year,quarter = list(map(int,data_frame_row.ClaimYearQuarter.split('Q')))
+        quarter_index = 4 * year + quarter - 1
         rul_quarters = 4 * data_frame_row.RUL
         eul_quarters = 4 * data_frame_row.EUL
         kWh=data_frame_row[['UESkWh','UESkWh_ER']]
@@ -56,12 +53,23 @@ def setup_input_measures(first_year):
         return calculated_columns
 
     # append input measures with calculated columns:
-    InputMeasures.append_columns(InputMeasures.data.apply(input_measure_calculated_columns,axis='columns',result_type='expand'))
+    InputMeasures.append_columns(InputMeasures.data.apply(input_measure_calculated_columns, axis='columns', result_type='expand'))
 
     return InputMeasures
 
 def setup_input_programs():
     InputPrograms = EDCS_Table('InputProgram',user['id'],user['passwd'])
+
+    # add column with universal quarter index:
+    def input_program_calculated_columns(data_frame_row):
+        year,quarter = list(map(int,data_frame_row.ClaimYearQuarter.split('Q')))
+        quarter_index = 4 * year + quarter - 1
+        calculated_columns = {
+            'Qi' : quarter_index,
+        }
+        return calculated_columns
+    
+    InputPrograms.append_columns(InputPrograms.data.apply(input_program_calculated_columns, axis='columns', result_type='expand'))
 
     # add method to get input program data filtered by a single input measure:
     def input_programs_metadata_filter(self, input_measure):
@@ -120,8 +128,8 @@ def setup_avoided_cost_electric(acc_electric_table_name,InputMeasures):
             (self.data.TS == input_measure.TS) & \
             (self.data.EU == input_measure.EU) & \
             (self.data.CZ == input_measure.CZ) & \
-            (self.Qi >= input_measure.Qi) & \
-            (self.Qi < input_measure.Qi + input_measure.EULq)
+            (self.data.Qi >= input_measure.Qi) & \
+            (self.data.Qi < input_measure.Qi + input_measure.EULq)
         )
         return filtered_avoided_costs_electric
     AvoidedCostElectric.metadata_filter = types.MethodType(avoided_cost_electric_metadata_filter,AvoidedCostElectric)
@@ -158,8 +166,8 @@ def setup_avoided_cost_gas(acc_gas_table_name,InputMeasures):
             (self.data.PA == input_measure.PA) & \
             (self.data.GS == input_measure.GS) & \
             (self.data.GP == input_measure.GP) & \
-            (self.Qi >= input_measure.Qi) & \
-            (self.Qi < input_measure.Qi + input_measure.EULq)
+            (self.data.Qi >= input_measure.Qi) & \
+            (self.data.Qi < input_measure.Qi + input_measure.EULq)
         )
         return filtered_avoided_costs_gas
     AvoidedCostGas.metadata_filter = types.MethodType(avoided_cost_gas_metadata_filter,AvoidedCostGas)

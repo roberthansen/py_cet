@@ -4,8 +4,8 @@ import numpy as np
 # calculate the quarterly generation benefits per unit--installation and realization rates, and net-to-gross is handled in the calculate_avoided_electric_costs functions lower:
 def present_value_generation_benefits(avoided_cost_electric, input_measure, settings, first_year):
     measure_install = input_measure.Qi
-    measure_phase_1 = input_measure.Qi + input_measure.EULq1
-    measure_phase_2 = input_measure.Qi + input_measure.EULq2
+    measure_phase_1 = measure_install + input_measure.EULq1
+    measure_phase_2 = measure_install + input_measure.EULq2
 
     #incorrect quarter index to match sql version of cet:
     avoided_cost_quarter = avoided_cost_electric.Qi - 1
@@ -32,8 +32,8 @@ def present_value_generation_benefits(avoided_cost_electric, input_measure, sett
 
 def present_value_transmission_and_distribution_benefits(avoided_cost_electric, input_measure, settings, first_year):
     measure_install = input_measure.Qi
-    measure_phase_1 = input_measure.Qi + input_measure.EULq1
-    measure_phase_2 = input_measure.Qi + input_measure.EULq2
+    measure_phase_1 = measure_install + input_measure.EULq1
+    measure_phase_2 = measure_install + input_measure.EULq2
 
     #incorrect quarter index to match sql version of cet:
     avoided_cost_quarter = avoided_cost_electric.Qi - 1
@@ -67,8 +67,8 @@ def present_value_transmission_and_distribution_benefits(avoided_cost_electric, 
 
 def present_value_gas_benefits(avoided_cost_gas, input_measure, settings, first_year):
     measure_install = input_measure.Qi
-    measure_phase_1 = input_measure.Qi + input_measure.EULq1
-    measure_phase_2 = input_measure.Qi + input_measure.EULq2
+    measure_phase_1 = measure_install + input_measure.EULq1
+    measure_phase_2 = measure_install + input_measure.EULq2
 
     # correct quarter index:
     #avoided_cost_quarter = avoided_cost_gas.Qi

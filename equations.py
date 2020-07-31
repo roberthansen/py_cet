@@ -139,3 +139,72 @@ def present_value_gas_benefits(avoided_cost_gas, input_measure, settings, first_
     gas_benefits = annual_gas_savings_rate * avoided_cost_gas.Cost / quarterly_discount_rate ** (avoided_cost_gas.Qi - first_year * 4)
 
     return gas_benefits
+
+def present_value_external_costs(measure, quarterly_discount_rate, first_year):
+    present_value_external_costs = (
+        measure.Qty *
+        measure[[
+            'IncentiveToOthers',
+            'DILaborCost',
+            'DIMaterialCost',
+            'EndUserRebate'
+        ]].sum() /
+        quarterly_discount_rate ** (measure.Qi - first_year * 4)
+    )
+    return present_value_external_costs
+
+def present_value_gross_incremental_cost(measure, quarterly_measure_inflation_rate, quarterly_discount_rate, first_year):
+    if measure.RUL > 0:
+        present_value_gross_incremental_cost = (
+            measure.Qty *
+            (
+                measure.UnitMeasureGrossCost -
+                (
+                    measure.UnitMeasureGrossCost -
+                    measure.UnitMeasureGrossCost_ER
+                ) *
+                (
+                    quarterly_measure_inflation_rate /
+                    quarterly_discount_rate
+                ) ** measure.RULq
+            ) /
+            quarterly_discount_rate ** ( measure.Qi - first_year * 4 )
+        )
+    else:
+        present_value_gross_incremental_cost = 0
+
+    return present_value_gross_incremental_cost
+
+def present_value_incentives_and_direct_installation(measure, quarterly_discount_rate, first_year):
+    present_value_incentives_and_direct_installation = (
+        measure.Qty *
+        measure[[
+            'IncentiveToOthers',
+            'DILaborCost',
+            'DIMaterialCost'
+        ]].sum() /
+        quarterly_discount_rate ** (measure.Qi - first_year * 4)
+    )
+
+    return present_value_incentives_and_direct_installation
+
+def present_value_rebates(measure, quarterly_discount_rate, first_year):
+    present_value_rebates = (
+        measure.Qty *
+        measure.EndUserRebate /
+       quarterly_discount_rate ** (measure.Qi - first_year * 4)
+    )
+    return present_value_rebates
+
+def present_value_excess_incentives(measure, quarterly_discount_rate, first_year):
+    present_value_excess_incentives = (
+        measure.Qty *
+        (
+            measure.IncentiveToOthers +
+            measure.DILaborCost +
+            measure.DIMaterialCost -
+            measure.UnitMeasureGrossCost
+        ) /
+        quarterly_discount_rate ** (measure.Qi - first_year * 4)
+    )
+    return max(present_value_excess_incentives, 0)

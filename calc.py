@@ -62,7 +62,7 @@ def calculate_measure_cost_effectiveness(cet_scenario):
             'ElectricNet'   : avoided_electric_costs.ElecBenNet,
             'GasGross'      : avoided_gas_costs.GasBenGross,
             'GasNet'        : avoided_gas_costs.GasBenNet,
-        }).groupby('PrgID').aggregate(np.sum)
+        }).groupby(['PrgID','Qi']).aggregate(np.sum)
     else:
         nonneg = lambda benefit: max(benefit,0)
         benefit_sums = pd.DataFrame({
@@ -80,11 +80,8 @@ def calculate_measure_cost_effectiveness(cet_scenario):
     f = lambda r: aggregation.calculate_total_resource_costs(r, programs, cet_scenario.Settings, cet_scenario.first_year)
     total_resource_costs = measures.apply(f, axis='columns')
 
-    program_administrator_cost_gross = 0
-    program_administrator_cost_net = 0
-    program_administrator_cost_no_admin = 0
-    program_administrator_ratio = 0
-    program_administrator_ratio_no_admin = 0
+    f = lambda r: aggregation.calculate_program_administrator_costs(r, programs, cet_scenario.Settings, cet_scenario.first_year)
+    program_administrator_costs = measures.apply(f, axis='columns')
 
     bill_reduction_electric = 0
     bill_reduction_gas = 0
@@ -97,7 +94,8 @@ def calculate_measure_cost_effectiveness(cet_scenario):
 
     outputs = avoided_electric_costs[['CET_ID','ElecBenGross','ElecBenNet']].merge(
         avoided_gas_costs[['CET_ID','GasBenGross','GasBenNet']], on='CET_ID').merge(
-        total_resource_costs, on='CET_ID')
+        total_resource_costs, on='CET_ID').merge(
+        program_administrator_costs, on='CET_ID')
 
     return outputs
 
