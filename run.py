@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import tables, aggregation, aggregation_match_sql
+import tables, tables_match_sql, aggregation, aggregation_match_sql
 
 from calc import calculate_measure_cost_effectiveness, calculate_program_cost_effectiveness
 
@@ -43,22 +43,41 @@ class CET_Scenario:
         self.setup_outputs()
         
     def setup_input_measures(self):
-        self.InputMeasures = tables.setup_input_measures(self.first_year)
+        if self.match_sql:
+            self.InputMeasures = tables_match_sql.setup_input_measures(self.first_year)
+        else:
+            self.InputMeasures = tables.setup_input_measures(self.first_year)
+
 
     def setup_input_programs(self):
-        self.InputPrograms = tables.setup_input_programs()
+        if self.match_sql:
+            self.InputPrograms = tables_match_sql.setup_input_programs()
+        else:
+            self.InputPrograms = tables.setup_input_programs()
 
     def setup_settings(self):
-        self.Settings = tables.setup_settings(self.acc_version,self.InputMeasures)
+        if self.match_sql:
+            self.Settings = tables_match_sql.setup_settings(self.acc_version,self.InputMeasures)
+        else:
+            self.Settings = tables.setup_settings(self.acc_version,self.InputMeasures)
 
     def setup_avoided_cost_electric(self):
-        self.AvoidedCostElectric = tables.setup_avoided_cost_electric(self._acc_tables[self.acc_version]['electric'],self.InputMeasures)
+        if self.match_sql:
+            self.AvoidedCostElectric = tables_match_sql.setup_avoided_cost_electric(self._acc_tables[self.acc_version]['electric'],self.InputMeasures)
+        else:
+            self.AvoidedCostElectric = tables.setup_avoided_cost_electric(self._acc_tables[self.acc_version]['electric'],self.InputMeasures)
 
     def setup_avoided_cost_gas(self):
-        self.AvoidedCostGas = tables.setup_avoided_cost_gas(self._acc_tables[self.acc_version]['gas'],self.InputMeasures)
+        if self.match_sql:
+            self.AvoidedCostGas = tables_match_sql.setup_avoided_cost_gas(self._acc_tables[self.acc_version]['gas'],self.InputMeasures)
+        else:
+            self.AvoidedCostGas = tables.setup_avoided_cost_gas(self._acc_tables[self.acc_version]['gas'],self.InputMeasures)
 
     def setup_outputs(self):
-        self.OutputCE = tables.setup_outputs()
+        if self.match_sql:
+            self.OutputCE = tables_match_sql.setup_outputs()
+        else:
+            self.OutputCE = tables.setup_outputs()
 
     # calculate measure-level benefits and costs:
     def run_cet(self):

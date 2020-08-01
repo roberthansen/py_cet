@@ -37,17 +37,31 @@ def calculate_avoided_electric_costs(input_measure, AvoidedCostElectric, Setting
         pv_gen = 0
         pv_td = 0
     
-    avoided_electric_costs = pd.Series([
-        input_measure.CET_ID,
-        input_measure.PrgID,
-        input_measure.Qi,
-        input_measure[['Qty','IRkWh','RRkWh']].product() * pv_gen,
-        input_measure[['Qty','IRkW','RRkW']].product() * pv_td,
-        input_measure[['Qty','IRkW','RRkW']].product() * ( pv_gen + pv_td ),
-        input_measure[['Qty','IRkWh','RRkWh']].product() * (input_measure.NTGRkWh + market_effects) * pv_gen,
-        input_measure[['Qty','IRkW','RRkW']].product() * (input_measure.NTGRkW + market_effects) * pv_td,
-        input_measure[['Qty','IRkW','RRkW']].product() * (input_measure.NTGRkW + market_effects) * ( pv_gen + pv_td ),
-    ], index=['CET_ID','PrgID','Qi','GenBenGross','TDBenGross','ElecBenGross','GenBenNet','TDBenNet','ElecBenNet'])
+    avoided_electric_costs = pd.Series({
+        'CET_ID'       : input_measure.CET_ID,
+        'PrgID'        : input_measure.PrgID,
+        'Qi'           : input_measure.Qi,
+        'GenBenGross'  : input_measure[['Qty','IRkWh','RRkWh']].product() * pv_gen,
+        'TDBenGross'   : input_measure[['Qty','IRkW','RRkW']].product() * pv_td,
+        'ElecBenGross' :(
+            input_measure[['Qty','IRkWh','RRkWh']].product() * pv_gen +
+            input_measure[['Qty','IRkW','RRkW']].product() * pv_td
+        ),
+        'GenBenNet'    : (
+            input_measure[['Qty','IRkWh','RRkWh']].product() *
+            (input_measure.NTGRkWh + market_effects) *
+            pv_gen
+        ),
+        'TDBenNet'     : (
+            input_measure[['Qty','IRkW','RRkW']].product() *
+            (input_measure.NTGRkW + market_effects) *
+            pv_td
+        ),
+        'ElecBenNet'   : (
+            input_measure[['Qty','IRkWh','RRkWh']].product() * (input_measure.NTGRkWh + market_effects) * pv_gen +
+            input_measure[['Qty','IRkW','RRkW']].product() * (input_measure.NTGRkW + market_effects) * pv_td
+        ),
+    })
 
     return avoided_electric_costs
 
@@ -151,6 +165,7 @@ def calculate_total_resource_costs(measure, programs, Settings, first_year):
         'AdminCostsOther',
         'MarketingOutreach',
         'DIActivity',
+        'DIInstallation',
         'DIHardwareAndMaterials',
         'DIRebateAndInspection',
         'EMV',

@@ -9,7 +9,7 @@ cet_scenario.run_cet()
 
 py_cet_output = cet_scenario.OutputCE
 
-sql_cet_output = EDCS_Query_Results('SELECT * FROM OutputCE WHERE JobID=0 ORDER BY CET_ID',user['id'],user['passwd']).data
+sql_cet_output = EDCS_Query_Results('SELECT * FROM OutputCE WHERE JobID=10000 ORDER BY CET_ID',user['id'],user['passwd']).data
 sql_cet_output.CET_ID = sql_cet_output.CET_ID.map(int)
 
 comparison = sql_cet_output[[

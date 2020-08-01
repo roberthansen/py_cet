@@ -185,83 +185,71 @@ def calculate_avoided_gas_costs(input_measure, AvoidedCostGas, Settings, first_y
 
     return avoided_gas_costs
 
-def calculate_program_costs(input_program, Settings, first_year):
-    # extract cost columns from input program:
-    total_program_costs = input_program[[
-        'AdminCostsOverheadAndGA',
-        'MarketingOutreach',
-        'DIActivity',
-        'DIInstallation',
-        'DIHardwareAndMaterials',
-        'DIRebateAndInspection',
-        'EMV',
-        'UserInputIncentive',
-        'CostsRecoveredFromOtherSources',
-    ]].aggregate(np.sum)
-    settings = Settings.metadata_filter(input_program).iloc[0]
+def present_value_external_costs(measure, quarterly_discount_rate, first_year):
+    present_value_external_costs = (
+        measure.Qty *
+        measure[[
+            'IncentiveToOthers',
+            'DILaborCost',
+            'DIMaterialCost',
+            'EndUserRebate'
+        ]].sum() /
+        quarterly_discount_rate ** ( avoided_cost_electric.Qac - 4 + 1 )
+    )
+    return present_value_external_costs
 
-    # get annual discount rate:
-    annual_discount_rate = 1 + settings.DiscountRateAnnual
+def present_value_gross_incremental_cost(measure, quarterly_measure_inflation_rate, quarterly_discount_rate, first_year):
+    if measure.RUL > 0:
+        present_value_gross_incremental_cost = (
+            measure.Qty *
+            (
+                measure.UnitMeasureGrossCost -
+                (
+                    measure.UnitMeasureGrossCost -
+                    measure.UnitMeasureGrossCost_ER
+                ) *
+                (
+                    quarterly_measure_inflation_rate /
+                    quarterly_discount_rate
+                ) ** measure.RULq
+            ) /
+            quarterly_discount_rate ** ( avoided_cost_electric.Qac - 4 + 1 )
+        )
+    else:
+        present_value_gross_incremental_cost = 0
 
-    # get program year from claim year string:
-    program_year = int(input_program.ClaimYearQuarter.split('Q')[0])
+    return present_value_gross_incremental_cost
 
-    # calculate net present value of program costs:
-    program_costs_npv = total_program_costs / annual_discount_rate ** (program_year - first_year)
+def present_value_incentives_and_direct_installation(measure, quarterly_discount_rate, first_year):
+    present_value_incentives_and_direct_installation = (
+        measure.Qty *
+        measure[[
+            'IncentiveToOthers',
+            'DILaborCost',
+            'DIMaterialCost'
+        ]].sum() /
+        quarterly_discount_rate ** ( measure.Qi - first_year * 4 )
+    )
 
-    program_costs = pd.Series([
-        input_program.PrgID,
-        total_program_costs,
-        program_costs_npv,
-    ], index=['PrgID','SumCosts','SumCostsNPV'])
+    return present_value_incentives_and_direct_installation
 
-    return program_costs
+def present_value_rebates(measure, quarterly_discount_rate, first_year):
+    present_value_rebates = (
+        measure.Qty *
+        measure.EndUserRebate /
+       quarterly_discount_rate ** ( avoided_cost_electric.Qac - 4 + 1 )
+    )
+    return present_value_rebates
 
-def calculate_rebates_and_incentives(input_measure, Settings, first_year, annual_measure_inflation_rate=0):
-    ### parameters:
-    ###     input_measure : a single row from the 'data' variable of an
-    ###         'InputMeasures' object of class 'EDCS_Table' or
-    ###         'EDCS_Query_Results'
-    ###     Settings : an instance of a 'Settings' object of class 'EDCS_Table'
-    ###         or 'EDCS_Query_Results'
-    ###     first_year : an int representing the first year of programs in a cet
-    ###         run
-    ###     annual_measure_inflation_rate : a float representing the annual
-    ###         inflaction rate by which the cost of a measure is expected to
-    ###         rise or fall, i.e., cost*(1+r)^y
-    ###
-    ### returns:
-    ###     pandas Series containing calculated measure costs
-
-    # get filtered settings table:
-    settings = Settings.metadata_filter(input_measure).iloc[0]
-
-    quarterly_discount_rate = 1 + settings.DiscountRateQtr
-    quarterly_measure_inflation_rate = 1 + annual_measure_inflation_rate / 4
-
-    # incentive cost in excess of gross cost:
-    excess_incentive_present_value = input_measure.Qty * (input_measure.IncentiveToOthers + input_measure.DILaborCost - input_measure.UnitMeasureGrossCost)
-
-    # present value of rebates to end-user:
-    rebates_present_value = input_measure.Qty * input_measure.EndUserRebate / ( quarterly_discount_rate ** (input_measure.Qi - first_year * 4))
-
-    # present value of up- and mid-stream incentives and direct installation costs:
-    incentives_and_direct_installation_present_value = input_measure.Qty * input_measure[['IncentiveToOthers','DILaborCost','DIMaterialCost']].aggregate(np.sum) / ( quarterly_discount_rate ** (input_measure.Qi - first_year * 4))
-
-    # present value of measure costs -- based on gross measure cost at time of installation less standard replacement cost at expected time-of-burnout (rul after install date):
-    measure_cost_gross_present_value = input_measure.Qty * ( input_measure.UnitMeasureGrossCost - (input_measure.UnitMeasureGrossCost - input_measure.UnitMeasureGrossCost_ER) * (quarterly_measure_inflation_rate / quarterly_discount_rate) ** input_measure.RULq) / (quarterly_discount_rate ** (input_measure.Qi - first_year * 4))
-
-    # incremental cost of all measures installed:
-    measure_incremental_cost = input_measure.Qty * input_measure.UnitMeasureGrossCost_ER
-
-    rebates_and_incentives = pd.Series([
-        input_measure.CET_ID,
-        input_measure.PrgID,
-        input_measure.NTGRCost,
-        excess_incentive_present_value,
-        rebates_present_value,
-        incentives_and_direct_installation_present_value,
-        measure_cost_gross_present_value,
-        measure_incremental_cost,
-    ], index=['CET_ID','PrgID','NTGRCost','ExcessIncPV','RebatesPV','IncentsAndDIPV','GrossMeasCostPV','MeasureIncCost'])
-    return rebates_and_incentives 
+def present_value_excess_incentives(measure, quarterly_discount_rate, first_year):
+    present_value_excess_incentives = (
+        measure.Qty *
+        (
+            measure.IncentiveToOthers +
+            measure.DILaborCost +
+            measure.DIMaterialCost -
+            measure.UnitMeasureGrossCost
+        ) /
+        quarterly_discount_rate ** ( avoided_cost_electric.Qac - 4 + 1 )
+    )
+    return max(present_value_excess_incentives, 0)
