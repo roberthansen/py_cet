@@ -80,15 +80,15 @@ def present_value_gas_benefits(avoided_cost_gas, input_measure, settings, first_
     quarterly_discount_rate = 1 + settings.DiscountRateQtr
 
     if measure_install <= avoided_cost_quarter and avoided_cost_quarter <= measure_phase_1 - 1:
-        annual_gas_savings_rate = input_measure.Thm1
+        annual_gas_savings_rate = input_measure.Therm1
     elif measure_phase_1 - 1 < avoided_cost_quarter and avoided_cost_quarter < measure_phase_1:
         quarter_fraction = input_measure.EULq1 % 1
-        annual_gas_savings_rate = input_measure.Thm1 * quarter_fraction + input_measure.Thm2 * (1 - quarter_fraction)
+        annual_gas_savings_rate = input_measure.Therm1 * quarter_fraction + input_measure.Therm2 * (1 - quarter_fraction)
     elif measure_phase_1 <= avoided_cost_quarter and avoided_cost_quarter <= measure_phase_2 - 1:
-        annual_gas_savings_rate = input_measure.Thm2
+        annual_gas_savings_rate = input_measure.Therm2
     elif measure_phase_2 - 1 < avoided_cost_quarter and avoided_cost_quarter < measure_phase_2:
         quarter_fraction = input_measure.EULq2 % 1
-        annual_gas_savings_rate = input_measure.Thm2 * quarter_fraction
+        annual_gas_savings_rate = input_measure.Therm2 * quarter_fraction
     else:
         annual_gas_savings_rate = 0
 
@@ -136,10 +136,10 @@ def calculate_avoided_electric_costs(input_measure, AvoidedCostElectric, Setting
     
     avoided_electric_costs = pd.Series([
         input_measure.CET_ID,
-        input_measure[['Qty','IRkWh','RRkWh']].product() * pv_gen,
-        input_measure[['Qty','IRkW','RRkW']].product() * pv_td,
-        input_measure[['Qty','IRkWh','RRkWh']].product() * (input_measure.NTGRkWh + market_effects) * pv_gen,
-        input_measure[['Qty','IRkW','RRkW']].product() * (input_measure.NTGRkW + market_effects) * pv_td,
+        input_measure[['Quantity','IRkWh','RRkWh']].product() * pv_gen,
+        input_measure[['Quantity','IRkW','RRkW']].product() * pv_td,
+        input_measure[['Quantity','IRkWh','RRkWh']].product() * (input_measure.NTGRkWh + market_effects) * pv_gen,
+        input_measure[['Quantity','IRkW','RRkW']].product() * (input_measure.NTGRkW + market_effects) * pv_td,
     ], index=['CET_ID','GenBenGross','TDBenGross','GenBenNet','TDBenNet'])
 
     return avoided_electric_costs
@@ -179,41 +179,41 @@ def calculate_avoided_gas_costs(input_measure, AvoidedCostGas, Settings, first_y
 
     avoided_gas_costs = pd.Series([
         input_measure.CET_ID,
-        input_measure[['Qty','IRThm','RRThm']].product() * pv_gas,
-        input_measure[['Qty','IRThm','RRThm']].product() * (input_measure.NTGRkW + market_effects) * pv_gas,
+        input_measure[['Quantity','IRThm','RRThm']].product() * pv_gas,
+        input_measure[['Quantity','IRThm','RRThm']].product() * (input_measure.NTGRkW + market_effects) * pv_gas,
     ], index=['CET_ID','GasBenGross','GasBenNet'])
 
     return avoided_gas_costs
 
 def present_value_external_costs(measure, quarterly_discount_rate, first_year):
     present_value_external_costs = (
-        measure.Qty *
+        measure.Quantity *
         measure[[
-            'IncentiveToOthers',
-            'DILaborCost',
-            'DIMaterialCost',
-            'EndUserRebate'
+            'UnitIncentiveToOthers',
+            'UnitLaborCost',
+            'UnitMaterialsCost',
+            'UnitEndUserRebate'
         ]].sum() /
-        quarterly_discount_rate ** ( avoided_cost_electric.Qac - 4 + 1 )
+        quarterly_discount_rate ** ( measure.Qi - 4 * first_year + 1 )
     )
     return present_value_external_costs
 
 def present_value_gross_incremental_cost(measure, quarterly_measure_inflation_rate, quarterly_discount_rate, first_year):
     if measure.RUL > 0:
         present_value_gross_incremental_cost = (
-            measure.Qty *
+            measure.Quantity *
             (
-                measure.UnitMeasureGrossCost -
+                measure.UnitGrossCost1 -
                 (
-                    measure.UnitMeasureGrossCost -
-                    measure.UnitMeasureGrossCost_ER
+                    measure.UnitGrossCost1 -
+                    measure.UnitGrossCost2
                 ) *
                 (
                     quarterly_measure_inflation_rate /
                     quarterly_discount_rate
                 ) ** measure.RULq
             ) /
-            quarterly_discount_rate ** ( avoided_cost_electric.Qac - 4 + 1 )
+            quarterly_discount_rate ** ( measure.Qi - 4 * first_year + 1 )
         )
     else:
         present_value_gross_incremental_cost = 0
@@ -222,34 +222,34 @@ def present_value_gross_incremental_cost(measure, quarterly_measure_inflation_ra
 
 def present_value_incentives_and_direct_installation(measure, quarterly_discount_rate, first_year):
     present_value_incentives_and_direct_installation = (
-        measure.Qty *
+        measure.Quantity *
         measure[[
-            'IncentiveToOthers',
-            'DILaborCost',
-            'DIMaterialCost'
+            'UnitIncentiveToOthers',
+            'UnitLaborCost',
+            'UnitMaterialsCost'
         ]].sum() /
-        quarterly_discount_rate ** ( measure.Qi - first_year * 4 )
+        quarterly_discount_rate ** ( measure.Qi - 4 * first_year - 1 )
     )
 
     return present_value_incentives_and_direct_installation
 
 def present_value_rebates(measure, quarterly_discount_rate, first_year):
     present_value_rebates = (
-        measure.Qty *
-        measure.EndUserRebate /
-       quarterly_discount_rate ** ( avoided_cost_electric.Qac - 4 + 1 )
+        measure.Quantity *
+        measure.UnitEndUserRebate /
+       quarterly_discount_rate ** ( measure.Qi - 4 * first_year + 1 )
     )
     return present_value_rebates
 
 def present_value_excess_incentives(measure, quarterly_discount_rate, first_year):
     present_value_excess_incentives = (
-        measure.Qty *
+        measure.Quantity *
         (
-            measure.IncentiveToOthers +
-            measure.DILaborCost +
-            measure.DIMaterialCost -
-            measure.UnitMeasureGrossCost
+            measure.UnitIncentiveToOthers +
+            measure.UnitLaborCost +
+            measure.UnitMaterialsCost -
+            measure.UnitGrossCost1
         ) /
-        quarterly_discount_rate ** ( avoided_cost_electric.Qac - 4 + 1 )
+        quarterly_discount_rate ** ( measure.Qi - 4 * first_year + 1 )
     )
     return max(present_value_excess_incentives, 0)

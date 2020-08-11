@@ -1,54 +1,115 @@
+import numpy as np
 import types
 from models import EDCS_Connection,EDCS_Table,EDCS_Query_Results
 
-from login import user
-
-def setup_input_measures(first_year):
-    InputMeasures = EDCS_Table('InputMeasure',user['id'],user['passwd'])
+def setup_input_measures(first_year, user):
+    InputMeasures = EDCS_Table('InputMeasureCEDARS',user['id'],user['passwd'])
 
     # indicate source of table from database:
     InputMeasures.source = 'database'
 
     # fix input measure column name and type issues:
-    InputMeasures.rename_column('ElecTargetSector','TS')
-    InputMeasures.rename_column('GasSector','GS')
-    InputMeasures.rename_column('GasSavingsProfile','GP')
-    InputMeasures.rename_column('ElecEndUseShape','EU')
-    InputMeasures.rename_column('ClimateZone','CZ')
+    if InputMeasures.table_name == 'InputMeasure':
+        rename_columns = [
+            ['PrgID','ProgramID'],
+            ['PA','ProgramAdministrator'],
+            ['ElecTargetSector','ElectricTargetSector'],
+            ['GasSector','GasTargetSector'],
+            ['ElecEndUseShape','ElectricEndUse'],
+            ['ClimateZone','ClimateZone'],
+            ['ElecRateSchedule','ElectricRateSchedule'],
+            ['ClaimYearQuarter','InstallationQuarter'],
+            ['Qty','Quantity'],
+            ['UESkW','kW1'],
+            ['UESkW_ER','kW2'],
+            ['UESkWh','kWh1'],
+            ['UESkWh_ER','kWh2'],
+            ['UESThm','Therm1'],
+            ['UESThm_ER','Therm2'],
+            ['IRThm','IRTherm'],
+            ['RRThm','RRTherm'],
+            ['NTGRThm','NTGRTherm'],
+            ['MarketEffectBens','MarketEffectsBenefits'],
+            ['MarketEffectCost','MarketEffectsCosts'],
+            ['UnitMeasureGrossCost','UnitGrossCost1'],
+            ['UnitMeasureGrossCost_ER','UnitGrossCost2'],
+            ['EndUserRebate','UnitEndUserRebate'],
+            ['IncentiveToOthers','UnitIncentiveToOthers'],
+            ['DILaborCost','UnitLaborCost'],
+            ['DIMaterialCost','UnitMaterialsCost'],
+        ]
+        for old_name,new_name in rename_columns:
+            InputMeasures.rename_column(old_name,new_name)
+        new_columns = pd.DataFrame({
+            'ImpactType'          : [''] * InputMeasures.data.CET_ID.count(),
+            'AnnualInflationRate' : [0] * InputMeasures.data.CET_ID.count(),
+        })
+        InputMeasures.append_columns(new_columns)
+
+    if InputMeasures.table_name == 'InputMeasureCEDARS':
+        rename_columns = [
+            ['CEInputID','CET_ID'],
+            ['PrgID','ProgramID'],
+            ['PA','ProgramAdministrator'],
+            ['MeasDescription','MeasureName'],
+            ['MeasImpactType','MeasureImpactType'],
+            ['E3TargetSector','ElectricTargetSector'],
+            ['E3MeaElecEndUseShape','ElectricEndUse'],
+            ['E3GasSavProfile','GasSavingsProfile'],
+            ['E3GasSector','GasTargetSector'],
+            ['E3ClimateZone','ClimateZone'],
+            ['RateScheduleElec','ElectricRateSchedule'],
+            ['RateScheduleGas','GasRateSchedule'],
+            ['ClaimYearQuarter','InstallationQuarter'],
+            ['NumUnits','Quantity'],
+            ['UnitkW1stBaseline','kW1'],
+            ['UnitkW2ndBaseline','kW2'],
+            ['UnitkWh1stBaseline','kWh1'],
+            ['UnitkWh2ndBaseline','kWh2'],
+            ['UnitTherm1stBaseline','Therm1'],
+            ['UnitTherm2ndBaseline','Therm2'],
+            ['EUL_Yrs','EUL'],
+            ['RUL_Yrs','RUL'],
+            ['InstallationRatekW','IRkW'],
+            ['InstallationRatekWh','IRkWh'],
+            ['InstallationRateTherm','IRTherm'],
+            ['RealizationRatekW','RRkW'],
+            ['RealizationRatekWh','RRkWh'],
+            ['RealizationRateTherm','RRTherm'],
+            ['MeasInflation','AnnualInflationRate'],
+            ['UnitMeaCost1stBaseline','UnitGrossCost1'],
+            ['UnitMeaCost2ndBaseline','UnitGrossCost2'],
+            ['UnitDirectInstallLab','UnitLaborCost'],
+            ['UnitDirectInstallMat','UnitMaterialsCost'],
+        ]
+        for old_name,new_name in rename_columns:
+            InputMeasures.rename_column(old_name,new_name)
     InputMeasures.column_map('CET_ID',lambda s: int(s))
-    InputMeasures.column_map('TS',lambda s: s.upper())
-    InputMeasures.column_map('GS',lambda s: s or '')
-    InputMeasures.column_map('GS',lambda s: s.upper())
-    InputMeasures.column_map('GP',lambda s: s or '')
-    InputMeasures.column_map('GP',lambda s: s.upper())
-    InputMeasures.column_map('EU',lambda s: s.upper())
-    InputMeasures.column_map('CZ',lambda s: s.upper())
+    InputMeasures.column_map('ElectricTargetSector',lambda s: s.upper())
+    InputMeasures.column_map('GasTargetSector',lambda s: s or '')
+    InputMeasures.column_map('GasTargetSector',lambda s: s.upper())
+    InputMeasures.column_map('GasSavingsProfile',lambda s: s or '')
+    InputMeasures.column_map('GasSavingsProfile',lambda s: s.upper())
+    InputMeasures.column_map('ElectricEndUse',lambda s: s.upper())
+    InputMeasures.column_map('ClimateZone',lambda s: s.upper())
+    InputMeasures.column_map('MarketEffectsCosts',np.nan_to_num)
 
     # helper function to calculate additional columns for input measure table:
     def input_measure_calculated_columns(data_frame_row):
-        year,quarter = list(map(int,data_frame_row.ClaimYearQuarter.split('Q')))
+        year,quarter = list(map(int,data_frame_row.InstallationQuarter.split('Q')))
         quarter_index = 4 * year + quarter - 1
         rul_quarters = 4 * data_frame_row.RUL
         eul_quarters = 4 * data_frame_row.EUL
-        kWh=data_frame_row[['UESkWh','UESkWh_ER']]
-        kW=data_frame_row[['UESkW','UESkW_ER']]
-        therm=data_frame_row[['UESThm','UESThm_ER']]
         if rul_quarters == 0:
             EULq = [eul_quarters,0]
         else:
             EULq = [rul_quarters,eul_quarters]
         calculated_columns = {
-            'Qi' : quarter_index,
+            'Qi'    : quarter_index,
             'EULq1' : EULq[0],
             'EULq2' : EULq[1],
-            'RULq' : rul_quarters,
-            'EULq' : eul_quarters,
-            'kWh1' : data_frame_row.UESkWh,
-            'kWh2' : data_frame_row.UESkWh_ER,
-            'kW1' : data_frame_row.UESkW,
-            'kW2' : data_frame_row.UESkW_ER,
-            'Thm1' : data_frame_row.UESThm,
-            'Thm2' : data_frame_row.UESThm_ER,
+            'RULq'  : rul_quarters,
+            'EULq'  : eul_quarters,
         }
         return calculated_columns
 
@@ -57,39 +118,53 @@ def setup_input_measures(first_year):
 
     return InputMeasures
 
-def setup_input_programs():
-    InputPrograms = EDCS_Table('InputProgram',user['id'],user['passwd'])
+def setup_input_programs(user):
+    InputPrograms = EDCS_Table('InputProgramCEDARS',user['id'],user['passwd'])
+
+    rename_columns = [
+        ['PrgID','ProgramID'],
+        ['PA','ProgramAdministrator'],
+        ['ClaimYearQuarter','InstallationQuarter'],
+    ]
+    for old_name,new_name in rename_columns:
+        InputPrograms.rename_column(old_name,new_name)
 
     # add column with universal quarter index:
     def input_program_calculated_columns(data_frame_row):
-        year,quarter = list(map(int,data_frame_row.ClaimYearQuarter.split('Q')))
+        year,quarter = list(map(int,data_frame_row.InstallationQuarter.split('Q')))
         quarter_index = 4 * year + quarter - 1
         calculated_columns = {
             'Qi' : quarter_index,
         }
         return calculated_columns
-    
     InputPrograms.append_columns(InputPrograms.data.apply(input_program_calculated_columns, axis='columns', result_type='expand'))
 
     # add method to get input program data filtered by a single input measure:
     def input_programs_metadata_filter(self, input_measure):
         filtered_input_programs = self.data.get(
-            (self.data.PrgID == input_measure.PrgID)
+            (self.data.ProgramID == input_measure.ProgramID)
         )
         return filtered_input_programs
     InputPrograms.metadata_filter = types.MethodType(input_programs_metadata_filter,InputPrograms)
 
     return InputPrograms
 
-def setup_settings(acc_version,InputMeasures):
+def setup_settings(acc_version, InputMeasures, user):
     sql_str = 'SELECT * FROM E3Settings WHERE Version={}'.format(acc_version)
     Settings = EDCS_Query_Results(sql_str,user['id'],user['passwd'])
-    Settings.column_map('PA',lambda s: s.strip())
+
+    rename_columns = [
+        ['PA','ProgramAdministrator'],
+    ]
+    for old_name,new_name in rename_columns:
+        Settings.rename_column(old_name,new_name)
+
+    Settings.column_map('ProgramAdministrator',lambda s: s.strip())
 
     # add method to get settings data filtered by a single input measure:
     def settings_metadata_filter(self, input_measure):
         filtered_settings = self.data.get(
-            (self.data.PA == input_measure.PA)
+            (self.data.ProgramAdministrator == input_measure.ProgramAdministrator)
         )
         return filtered_settings
     Settings.metadata_filter = types.MethodType(settings_metadata_filter,Settings)
@@ -97,37 +172,52 @@ def setup_settings(acc_version,InputMeasures):
     return Settings
 
 
-def setup_avoided_cost_electric(acc_electric_table_name,InputMeasures):
+def setup_avoided_cost_electric(acc_electric_table_name, InputMeasures, user):
     if InputMeasures.source == 'database':
         # use the following query string when input measures are loaded into database:
-        acc_elec_sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA+UPPER(TS)+UPPER(EU)+CZ\n\t' \
-            'IN (\n\t\tSELECT PA+UPPER(ElecTargetSector)+UPPER(ElecEndUseShape)+ClimateZone\n\t\t' \
-            'FROM InputMeasure\n\t)\n'.format(acc_electric_table_name)
+        if InputMeasures.table_name == 'InputMeasure':
+            acc_elec_sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA+UPPER(TS)+UPPER(EU)+CZ\n\t' \
+                'IN (\n\t\tSELECT PA+UPPER(ElecTargetSector)+UPPER(ElecEndUseShape)+ClimateZone\n\t\t' \
+                'FROM InputMeasure\n\t)\n'.format(acc_electric_table_name)
+        elif InputMeasures.table_name == 'InputMeasureCEDARS':
+            acc_elec_sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA+UPPER(TS)+UPPER(EU)+CZ\n\t' \
+                'IN (\n\t\tSELECT PA+UPPER(E3TargetSector)+UPPER(E3MeaElecEndUseShape)+E3ClimateZone\n\t\t' \
+                'FROM InputMeasureCEDARS\n\t)\n'.format(acc_electric_table_name)
     else:
         # use the following query string when input measures are from a file:
-        input_meta_data_elec = ',\n\t\t'.join(list(dict.fromkeys(['\''+'|'.join(r[1][['PA','TS','EU','CZ']])+'\'' for r in InputMeasures.data.iterrows()])))
+        input_meta_data_elec = ',\n\t\t'.join(list(dict.fromkeys(['\''+'|'.join(r[1][['ProgramAdministrator','ElectricTargetSector','ElectricEndUse','ClimateZone']])+'\'' for r in InputMeasures.data.iterrows()])))
         acc_elec_sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA+\'|\'+UPPER(TS)+\'|\'+UPPER(EU)+\'|\'+CZ\n\tIN (\n\t\t{}\n\t)\n'.format(acc_electric_table_name,input_meta_data_elec)
 
     AvoidedCostElectric = EDCS_Query_Results(acc_elec_sql_str,user['id'],user['passwd'])
 
+    rename_columns = [
+        ['PA','ProgramAdministrator'],
+        ['TS','ElectricTargetSector'],
+        ['EU','ElectricEndUse'],
+        ['CZ','ClimateZone'],
+        ['Qtr','UsageQuarter'],
+    ]
+    for old_name,new_name in rename_columns:
+        AvoidedCostElectric.rename_column(old_name,new_name)
+
     # fix column formatting:
-    AvoidedCostElectric.column_map('TS',lambda s: s.upper())
-    AvoidedCostElectric.column_map('EU',lambda s: s.upper())
-    AvoidedCostElectric.column_map('CZ',lambda s: s.upper())
+    AvoidedCostElectric.column_map('ElectricTargetSector',lambda s: s.upper())
+    AvoidedCostElectric.column_map('ElectricEndUse',lambda s: s.upper())
+    AvoidedCostElectric.column_map('ClimateZone',lambda s: s.upper())
 
     # apply universal quarter indices:
     def quarter_index(r):
-        year,quarter = list(map(int,r.Qtr.split('Q')))
+        year,quarter = list(map(int,r.UsageQuarter.split('Q')))
         return {'Qi' : year * 4 + quarter - 1}
     AvoidedCostElectric.append_columns(AvoidedCostElectric.data.apply(quarter_index,axis='columns',result_type='expand'))
 
     # add method to get avoided cost electric data filtered by a single input measure:
     def avoided_cost_electric_metadata_filter(self, input_measure):
         filtered_avoided_costs_electric = self.data.get(
-            (self.data.PA == input_measure.PA) & \
-            (self.data.TS == input_measure.TS) & \
-            (self.data.EU == input_measure.EU) & \
-            (self.data.CZ == input_measure.CZ) & \
+            (self.data.ProgramAdministrator == input_measure.ProgramAdministrator) & \
+            (self.data.ElectricTargetSector == input_measure.ElectricTargetSector) & \
+            (self.data.ElectricEndUse == input_measure.ElectricEndUse) & \
+            (self.data.ClimateZone == input_measure.ClimateZone) & \
             (self.data.Qi >= input_measure.Qi) & \
             (self.data.Qi < input_measure.Qi + input_measure.EULq)
         )
@@ -136,36 +226,50 @@ def setup_avoided_cost_electric(acc_electric_table_name,InputMeasures):
 
     return AvoidedCostElectric
 
-def setup_avoided_cost_gas(acc_gas_table_name,InputMeasures):
+def setup_avoided_cost_gas(acc_gas_table_name, InputMeasures, user):
     if InputMeasures.source == 'database':
         # use the following query string when input measures are loaded into database:
-        acc_gas_sql_str = 'SELECT *\n\tFROM {}\n\tWHERE PA+UPPER(GS)+UPPER(GP)\n\t' \
-            'IN (\n\t\tSELECT PA+UPPER(GasSector)+UPPER(GasSavingsProfile)\n\t\t' \
-            'FROM InputMeasure\n\t)\n'.format(acc_gas_table_name)
+        if InputMeasures.table_name == 'InputMeasure':
+            acc_gas_sql_str = 'SELECT *\n\tFROM {}\n\tWHERE PA+UPPER(GS)+UPPER(GP)\n\t' \
+                'IN (\n\t\tSELECT PA+UPPER(GasSector)+UPPER(GasSavingsProfile)\n\t\t' \
+                'FROM InputMeasure\n\t)\n'.format(acc_gas_table_name)
+        elif InputMeasures.table_name == 'InputMeasureCEDARS':
+            acc_gas_sql_str = 'SELECT *\n\tFROM {}\n\tWHERE PA+UPPER(GS)+UPPER(GP)\n\t' \
+                'IN (\n\t\tSELECT PA+UPPER(E3GasSector)+UPPER(E3GasSavProfile)\n\t\t' \
+                'FROM InputMeasureCEDARS\n\t)\n'.format(acc_gas_table_name)
     else:
-        input_meta_data_gas = ',\n\t\t'.join(list(dict.fromkeys(['\''+'|'.join(r[1][['PA','GS','GP']])+'\'' for r in self.InputMeasures.data.iterrows()])))
+        input_meta_data_gas = ',\n\t\t'.join(list(dict.fromkeys(['\''+'|'.join(r[1][['ProgramAdministrator','GasTargetSector','GasSavingsProfile']])+'\'' for r in self.InputMeasures.data.iterrows()])))
         acc_gas_sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA+\'|\'+UPPER(GS)+\'|\'+UPPER(GP)\n\tIN (\n\t\t{}\n\t)\n'.format(self._acc_tables[acc_version]['gas'],input_meta_data_gas)
 
     # use the following alternative query string when input measures are loaded into database:
     AvoidedCostGas = EDCS_Query_Results(acc_gas_sql_str,user['id'],user['passwd'])
 
+    rename_columns = [
+        ['PA','ProgramAdministrator'],
+        ['GS','GasTargetSector'],
+        ['GP','GasSavingsProfile'],
+        ['Qtr','UsageQuarter'],
+        ['Total','Cost'],
+    ]
+    for old_name,new_name in rename_columns:
+        AvoidedCostGas.rename_column(old_name,new_name)
+
     # fix column formatting:
-    AvoidedCostGas.column_map('GS',lambda s: s.upper())
-    AvoidedCostGas.column_map('GP',lambda s: s.upper())
-    AvoidedCostGas.rename_column('Total','Cost')
+    AvoidedCostGas.column_map('GasTargetSector',lambda s: s.upper())
+    AvoidedCostGas.column_map('GasSavingsProfile',lambda s: s.upper())
 
     # apply universal quarter indices:
     def quarter_index(r):
-        year,quarter = list(map(int,r.Qtr.split('Q')))
+        year,quarter = list(map(int,r.UsageQuarter.split('Q')))
         return {'Qi' : year * 4 + quarter - 1}
     AvoidedCostGas.append_columns(AvoidedCostGas.data.apply(quarter_index,axis='columns',result_type='expand'))
 
     # add method to get avoided cost gas data filtered by a single input measure:
     def avoided_cost_gas_metadata_filter(self, input_measure):
         filtered_avoided_costs_gas = self.data.get(
-            (self.data.PA == input_measure.PA) & \
-            (self.data.GS == input_measure.GS) & \
-            (self.data.GP == input_measure.GP) & \
+            (self.data.ProgramAdministrator == input_measure.ProgramAdministrator) & \
+            (self.data.GasTargetSector == input_measure.GasTargetSector) & \
+            (self.data.GasSavingsProfile == input_measure.GasSavingsProfile) & \
             (self.data.Qi >= input_measure.Qi) & \
             (self.data.Qi < input_measure.Qi + input_measure.EULq)
         )
@@ -174,15 +278,23 @@ def setup_avoided_cost_gas(acc_gas_table_name,InputMeasures):
 
     return AvoidedCostGas
 
-def setup_outputs():
+def setup_cost_effectiveness_outputs(user):
     OutputCE = EDCS_Table('OutputCE',user['id'],user['passwd'],fetch_init=False)
     OutputCE.set_table_cols([
-        'ID','JobID','PA','PrgID','CET_ID','ElecBen','GasBen',
-        'ElecBenGross','GasBenGross','TRCCost','PACCost','TRCCostGross',
-        'TRCCostNoAdmin','PACCostNoAdmin','TRCRatio','PACRatio',
-        'TRCRatioNoAdmin','PACRatioNoAdmin','BillReducElec',
-        'BillReducGas','RIMCost','WeightedBenefits','WeightedElecAlloc',
-        'WeightedProgramCost'
+        'ID','JobID','ProgramAdministrator','ProgramID','CET_ID',
+        'ElectricBenefitsNet','GasBenefitsNet','ElectricBenefitsGross',
+        'GasBenefitsGross','TRCCostNet','TRCCostGross','TRCCostNetNoAdmin',
+        'TRCRatio','TRCRatioNoAdmin','PACCostNet','PACCostNetNoAdmin',
+        'PACRatio','PACRatioNoAdmin','BillReducElec','BillReducGas','RIMCost',
+        'WeightedBenefits','WeightedElecAlloc','WeightedProgramCost',
     ])
 
     return OutputCE
+
+def setup_program_outputs(user):
+    OutputPrograms = EDCS_Table('OutputProgram',user['id'],user['passwd'],fetch_init=False)
+    OutputPrograms.set_table_cols([
+        'ID','ProgramAdministrator','ProgramID'
+    ])
+
+    return OutputPrograms
