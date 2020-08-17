@@ -30,15 +30,15 @@ class EDCS_Connection:
         self.connection = pyodbc.connect(self.connection_str)
         self.cursor = self.connection.cursor()
     def fetch_sql(self,sql_str):
-        print('Executing SQL Retreival Script: \'{}\' ...'.format(sql_str),end='')
+        print('\nExecuting SQL Retreival Script:\n\n{}\'\n\t...'.format(sql_str),end='')
         start_time = datetime.datetime.now()
         results = pd.read_sql_query(sql_str,self.connection)
         end_time = datetime.datetime.today()
         retreive_time = 1000 * (end_time - start_time).total_seconds()
-        print(' Retrieved in {}ms.'.format(retreive_time))
+        print('\n\n\tRetrieved in {:,.1f}ms.'.format(retreive_time))
         return results
     def execute_sql(self,sql_str):
-        print('Executing SQL Script: \'{}\''.format(sql_str))
+        print('\nExecuting SQL Script: \'{}\''.format(sql_str))
         self.cursor = self.cursor.execute(sql_str)
 # generic sql object class:
 class SQL_Object:

@@ -3,9 +3,9 @@ import pandas as pd
 
 import equations as eq
 
-def calculate_avoided_electric_costs(input_measure, AvoidedCostElectric, Settings, first_year, market_effects):
+def calculate_avoided_electric_costs(measure, AvoidedCostElectric, Settings, first_year, market_effects):
     ### parameters:
-    ###     input_measure : a pandas Series containing a single row from the
+    ###     measure : a pandas Series containing a single row from the
     ###         'data' pandas DataFrame in an 'InputMeasures' object of class
     ###         'EDCS_Table' or 'EDCS_Query_Results'
     ###     AvoidedCostElectric : an instance of an 'AvoidedCostElectric' object
@@ -22,52 +22,92 @@ def calculate_avoided_electric_costs(input_measure, AvoidedCostElectric, Setting
     ###     electric costs
 
     # filter avoided cost table:
-    avoided_cost_electric = AvoidedCostElectric.metadata_filter(input_measure)
+    avoided_cost_electric = AvoidedCostElectric.filter_by_measure(measure)
 
     if avoided_cost_electric.size > 0:
         # filter settings table:
-        settings = Settings.metadata_filter(input_measure).iloc[0]
+        settings = Settings.filter_by_measure(measure).iloc[0]
 
-        f = lambda r: eq.present_value_generation_benefits(r, input_measure, settings, first_year)
-        pv_gen = avoided_cost_electric.apply(f, axis='columns').aggregate(np.sum)
+        f = lambda r: eq.present_value_generation_benefits(r, measure, settings, first_year)
+        present_value_generation_benefits = avoided_cost_electric.apply(f, axis='columns').aggregate(np.sum)
 
-        f = lambda r: eq.present_value_transmission_and_distribution_benefits(r, input_measure, settings, first_year)
-        pv_td = avoided_cost_electric.apply(f, axis='columns').aggregate(np.sum)
+        f = lambda r: eq.present_value_transmission_and_distribution_benefits(r, measure, settings, first_year)
+        present_value_transmission_and_distribution_benefits = avoided_cost_electric.apply(f, axis='columns').aggregate(np.sum)
     else:
-        pv_gen = 0
-        pv_td = 0
+        present_value_generation_benefits = 0
+        present_value_transmission_and_distribution_benefits = 0
     
     avoided_electric_costs = pd.Series({
-        'CET_ID'       : input_measure.CET_ID,
-        'ProgramID'    : input_measure.ProgramID,
-        'Qi'           : input_measure.Qi,
-        'GenBenGross'  : input_measure[['Quantity','IRkWh','RRkWh']].product() * pv_gen,
-        'TDBenGross'   : input_measure[['Quantity','IRkW','RRkW']].product() * pv_td,
-        'ElecBenGross' :(
-            input_measure[['Quantity','IRkWh','RRkWh']].product() * pv_gen +
-            input_measure[['Quantity','IRkW','RRkW']].product() * pv_td
+        'CET_ID'                                   : measure.CET_ID,
+        'ProgramID'                                : measure.ProgramID,
+        'Qi'                                       : measure.Qi,
+        'GenerationBenefitsGross'                  : max(
+            measure[['Quantity','IRkWh','RRkWh']].product() * present_value_generation_benefits,
+            0
         ),
-        'GenBenNet'    : (
-            input_measure[['Quantity','IRkWh','RRkWh']].product() *
-            (input_measure.NTGRkWh + market_effects) *
-            pv_gen
+        'TransmissionAndDistributionBenefitsGross' : max(
+            measure[['Quantity','IRkW','RRkW']].product() * present_value_transmission_and_distribution_benefits,
+            0
         ),
-        'TDBenNet'     : (
-            input_measure[['Quantity','IRkW','RRkW']].product() *
-            (input_measure.NTGRkW + market_effects) *
-            pv_td
+        'ElectricBenefitsGross'                    : max(
+            -measure[['Quantity','IRkWh','RRkWh']].product() * present_value_generation_benefits -
+            measure[['Quantity','IRkW','RRkW']].product() * present_value_transmission_and_distribution_benefits,
+            0
         ),
-        'ElecBenNet'   : (
-            input_measure[['Quantity','IRkWh','RRkWh']].product() * (input_measure.NTGRkWh + market_effects) * pv_gen +
-            input_measure[['Quantity','IRkW','RRkW']].product() * (input_measure.NTGRkW + market_effects) * pv_td
+        'GenerationCostsGross'                     : max(
+            -measure[['Quantity','IRkWh','RRkWh']].product() * present_value_generation_benefits,
+            0
+        ),
+        'TransmissionAndDistributionCostsGross'    : max(
+            -measure[['Quantity','IRkW','RRkW']].product() * present_value_transmission_and_distribution_benefits,
+            0
+        ),
+        'ElectricCostsGross'                       : max(
+            -measure[['Quantity','IRkWh','RRkWh']].product() * present_value_generation_benefits -
+            measure[['Quantity','IRkW','RRkW']].product() * present_value_transmission_and_distribution_benefits,
+            0
+        ),
+        'GenerationBenefitsNet'                    : max(
+            measure[['Quantity','IRkWh','RRkWh']].product() *
+            (measure.NTGRkWh + market_effects) *
+            present_value_generation_benefits,
+            0
+        ),
+        'TransmissionAndDistributionBenefitsNet'   : max(
+            measure[['Quantity','IRkW','RRkW']].product() *
+            (measure.NTGRkW + market_effects) *
+            present_value_transmission_and_distribution_benefits,
+            0
+        ),
+        'ElectricBenefitsNet'                      : max(
+            measure[['Quantity','IRkWh','RRkWh']].product() * (measure.NTGRkWh + market_effects) * present_value_generation_benefits +
+            measure[['Quantity','IRkW','RRkW']].product() * (measure.NTGRkW + market_effects) * present_value_transmission_and_distribution_benefits,
+            0
+        ),
+        'GenerationCostsNet'                       : max(
+            measure[['Quantity','IRkWh','RRkWh']].product() *
+            (measure.NTGRkWh + market_effects) *
+            present_value_generation_benefits,
+            0
+        ),
+        'TransmissionAndDistributionCostsNet'      : max(
+            measure[['Quantity','IRkW','RRkW']].product() *
+            (measure.NTGRkW + market_effects) *
+            present_value_transmission_and_distribution_benefits,
+            0
+        ),
+        'ElectricCostsNet'                         : max(
+            measure[['Quantity','IRkWh','RRkWh']].product() * (measure.NTGRkWh + market_effects) * present_value_generation_benefits +
+            measure[['Quantity','IRkW','RRkW']].product() * (measure.NTGRkW + market_effects) * present_value_transmission_and_distribution_benefits,
+            0
         ),
     })
 
     return avoided_electric_costs
 
-def calculate_avoided_gas_costs(input_measure, AvoidedCostGas, Settings, first_year, market_effects):
+def calculate_avoided_gas_costs(measure, AvoidedCostGas, Settings, first_year, market_effects):
     ### parameters:
-    ###     input_measure : a pandas Series containing a single row from the
+    ###     measure : a pandas Series containing a single row from the
     ###         'data' pandas DataFrame in an 'InputMeasures' object of class
     ###         'EDCS_Table' or 'EDCS_Query_Results'
     ###     AvoidedCostGas : an instance of an 'AvoidedCostGas' object of class
@@ -82,27 +122,38 @@ def calculate_avoided_gas_costs(input_measure, AvoidedCostGas, Settings, first_y
     ###     gas costs
 
     # filter avoided cost table:
-    avoided_cost_gas = AvoidedCostGas.metadata_filter(input_measure)
+    avoided_cost_gas = AvoidedCostGas.filter_by_measure(measure)
 
     if avoided_cost_gas.size > 0:
         # filter settings table:
-        settings = Settings.metadata_filter(input_measure).iloc[0]
+        settings = Settings.filter_by_measure(measure).iloc[0]
 
-        f = lambda r: eq.present_value_gas_benefits(r, input_measure, settings, first_year)
+        f = lambda r: eq.present_value_gas_benefits(r, measure, settings, first_year)
         pv_gas = avoided_cost_gas.apply(f,axis='columns').aggregate(np.sum)
     else:
         pv_gas = 0
 
     avoided_gas_costs = pd.Series({
-        'CET_ID'      : input_measure.CET_ID,
-        'ProgramID'   : input_measure.ProgramID,
-        'Qi'          : input_measure.Qi,
-        'GasBenGross' : (
-            input_measure[['Quantity','IRTherm','RRTherm']].product() * pv_gas
+        'CET_ID'           : measure.CET_ID,
+        'ProgramID'        : measure.ProgramID,
+        'Qi'               : measure.Qi,
+        'GasBenefitsGross' : max(
+            measure[['Quantity','IRTherm','RRTherm']].product() * pv_gas,
+            0
         ),
-        'GasBenNet'   : (
-            input_measure[['Quantity','IRTherm','RRTherm']].product() *
-            (input_measure.NTGRkW + market_effects) * pv_gas
+        'GasCostsGross'    : max(
+            -measure[['Quantity','IRTherm','RRTherm']].product() * pv_gas,
+            0
+        ),
+        'GasBenefitsNet'   : max(
+            measure[['Quantity','IRTherm','RRTherm']].product() *
+            (measure.NTGRkW + market_effects) * pv_gas,
+            0
+        ),
+        'GasCostsNet'      : max(
+            -measure[['Quantity','IRTherm','RRTherm']].product() *
+            (measure.NTGRkW + market_effects) * pv_gas,
+            0
         ),
     })
 
@@ -124,21 +175,18 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     ###     float value of the total resource cost test for the given measure
     
     # filter programs based on measure, both subtotals for measure's installation quarter and totals for all quarters:
-    sum_columns = ['ProgramID','Count','ElectricGross','ElectricNet','GasGross','GasNet']
+    sum_columns = ['ProgramID','Count','ElectricBenefitsGross','ElectricBenefitsNet','GasBenefitsGross','GasBenefitsNet']
     program = programs.get(programs.ProgramID == measure.ProgramID)
     program_total = programs.get(programs.ProgramID == measure.ProgramID)[sum_columns].groupby('ProgramID').aggregate(np.sum).iloc[0]
 
     # filter settings based on measure:
-    settings = Settings.metadata_filter(measure).iloc[0]
+    settings = Settings.filter_by_measure(measure).iloc[0]
 
     # get quarterly discount rate for exponentiation:
     quarterly_discount_rate = 1 + settings.DiscountRateQtr
 
-    # get measure inflation rate if present:
-    try:
-        quarterly_measure_inflation_rate = 1 + measure.AnnualInflationRate / 4
-    except:
-        quarterly_measure_inflation_rate = 1.0
+    # get measure inflation rate:
+    quarterly_measure_inflation_rate = 1 + measure.AnnualInflationRate / 4
 
     # calculate the present value of cost to external parties:
     present_value_external_costs = eq.present_value_external_costs(measure, quarterly_discount_rate, first_year)
@@ -193,48 +241,56 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     present_value_program_costs = program.apply(f, axis='columns').aggregate(np.sum)
 
     # weigh program costs based on measure gross savings, if possible, otherwise by install count:
-    if program_total[['ElectricGross','GasGross']].sum() != 0:
+    if program_total[['ElectricBenefitsGross','GasBenefitsGross']].sum() > 0:
         program_weighting_gross = (
-            max(measure.ElecBenGross, 0) +
-            max(measure.GasBenGross, 0)
-        ) / program_total[['ElectricGross','GasGross']].sum()
+            measure[['ElectricBenefitsGross','GasBenefitsGross']].sum() /
+            program_total[['ElectricBenefitsGross','GasBenefitsGross']].sum()
+        )
     else:
         program_weighting_gross = 1 / program_total.Count
 
     total_resource_cost_gross = (
         program_weighting_gross * present_value_program_costs +
         present_value_external_costs +
-        present_value_gross_participant_costs
+        present_value_gross_participant_costs +
+        measure.ElectricCostsGross +
+        measure.GasCostsGross
     )
 
     total_resource_cost_gross_no_admin = (
         present_value_external_costs +
-        present_value_gross_participant_costs
+        present_value_gross_participant_costs +
+        measure.ElectricCostsGross +
+        measure.GasCostsGross
     )
 
     # weigh program costs based on measure net savings, if possible, otherwise by install count:
-    if program_total[['ElectricNet','GasNet']].sum() != 0:
+    if program_total[['ElectricBenefitsNet','GasBenefitsNet']].sum() > 0:
         program_weighting_net = (
-            max(measure.ElecBenNet, 0) +
-            max(measure.GasBenNet, 0)
-        ) / program_total[['ElectricNet','GasNet']].sum()
+            measure[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
+            program_total[['ElectricBenefitsNet','GasBenefitsNet']].sum()
+        )
     else:
         program_weighting_net = 1 / program_total.Count
 
     total_resource_cost_net = (
         program_weighting_net * present_value_program_costs +
         present_value_external_costs +
-        present_value_net_participant_costs
+        present_value_net_participant_costs +
+        measure.ElectricCostsNet +
+        measure.GasCostsNet
     )
 
     total_resource_cost_net_no_admin = (
         present_value_external_costs +
-        present_value_net_participant_costs
+        present_value_net_participant_costs +
+        measure.ElectricCostsNet +
+        measure.GasCostsNet
     )
 
     if total_resource_cost_net != 0:
         total_resource_cost_ratio = (
-            measure[['ElecBenNet','GasBenNet']].sum() /
+            measure[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
             total_resource_cost_net
         )
     else:
@@ -242,7 +298,7 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
 
     if total_resource_cost_net_no_admin != 0:
         total_resource_cost_ratio_no_admin = (
-            measure[['ElecBenNet','GasBenNet']].sum() /
+            measure[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
             total_resource_cost_net_no_admin
         )
     else:
@@ -256,11 +312,6 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
         'TotalResourceCostNetNoAdmin'   : total_resource_cost_net_no_admin,
         'TotalResourceCostRatio'        : total_resource_cost_ratio,
         'TotalResourceCostRatioNoAdmin' : total_resource_cost_ratio_no_admin,
-        #DEBUGGING:
-        'ProgramWeighting'              : program_weighting_net,
-        'ProgramCosts'                  : present_value_program_costs,
-        'ExternalCosts'                 : present_value_external_costs,
-        'ParticipantCosts'              : present_value_net_participant_costs,
     })
 
 def program_administrator_cost_test(measure, programs, Settings, first_year):
@@ -279,12 +330,12 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
     ###     float value of the program administrator cost test for the given measure
 
     # filter programs based on measure, both subtotals for measure's installation quarter and totals for all quarters:
-    sum_columns = ['ProgramID','Count','ElectricGross','ElectricNet','GasGross','GasNet']
+    sum_columns = ['ProgramID','Count','ElectricBenefitsGross','ElectricBenefitsNet','GasBenefitsGross','GasBenefitsNet']
     program = programs.get(programs.ProgramID == measure.ProgramID)
     program_total = programs.get(programs.ProgramID == measure.ProgramID)[sum_columns].groupby('ProgramID').aggregate(np.sum).iloc[0]
 
     # filter settings based on measure:
-    settings = Settings.metadata_filter(measure).iloc[0]
+    settings = Settings.filter_by_measure(measure).iloc[0]
 
     # get quarterly discount rate for exponentiation:
     quarterly_discount_rate = 1 + settings.DiscountRateQtr
@@ -311,11 +362,11 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
     present_value_program_costs = program.apply(f, axis='columns').aggregate(np.sum)
 
     # weigh program costs based on measure gross savings, if possible, otherwise by install count:
-    if program_total[['ElectricNet','GasNet']].sum() != 0:
+    if program_total[['ElectricBenefitsNet','GasBenefitsNet']].sum() > 0:
         program_weighting = (
-            max(measure.ElecBenNet, 0) +
-            max(measure.GasBenNet, 0)
-        ) / program_total[['ElectricNet','GasNet']].sum()
+            measure[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
+            program_total[['ElectricBenefitsNet','GasBenefitsNet']].sum()
+        )
     else:
         program_weighting = 1 / program_total.Count
 
@@ -334,7 +385,7 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
 
     if program_administrator_cost != 0:
         program_administrator_cost_ratio = (
-            measure[['ElecBenNet','GasBenNet']].sum() /
+            measure[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
             program_administrator_cost
         )
     else:
@@ -342,7 +393,7 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
 
     if program_administrator_cost_no_admin != 0:
         program_administrator_cost_ratio_no_admin = (
-            measure[['ElecBenNet','GasBenNet']].sum() /
+            measure[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
             program_administrator_cost_no_admin
         )
     else:
@@ -356,14 +407,59 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
         'ProgramAdministratorCostRatioNoAdmin' : program_administrator_cost_ratio_no_admin,
     })
 
-def calculate_bill_reduction_electric():
-    pass
+def ratepayer_impact_measure_test(measure, RateScheduleElectric, RateScheduleGas, Settings, market_effects, first_year):
+    ### parameters:
+    ###     measure : a pandas Series containing a single row from the
+    ###         'data' pandas DataFrame in an 'InputMeasures' object of class
+    ###         'EDCS_Table' or 'EDCS_Query_Results'
+    ###     RateScheduleElectric : an instance of a 'RateScheduleElectric' object
+    ###         of class 'EDCS_Table' or 'EDCS_Query_Results'
+    ###     RateScheduleGas : an instance of a 'RateScheduleGas' object of class
+    ###         'EDCS_Table' or 'EDCS_Query_Results'
+    ###     Settings : an instance of a 'Settings' object of class 'EDCS_Table'
+    ###         or 'EDCS_Query_Results'
+    ###     market_effects : a float representing the allowed market effects for
+    ###         the program
+    ###     first_year : an int representing the first year for the program
+    ###         through which the input measure is implemented
+    ###
+    ### returns:
+    ###     pandas Series containing the results of the Ratepayer Impact Measure
+    ###     test
 
-def calculate_bill_reduction_gas():
-    pass
+    # filter electric and gas rate schedules according to measure:
+    annual_electric_rates = RateScheduleElectric.filter_by_measure(measure)
+    annual_gas_rates = RateScheduleGas.filter_by_measure(measure)
 
-def calculate_ratepayer_cost():
-    pass
+    # filter settings table according to measure:
+    settings = Settings.filter_by_measure(measure).iloc[0]
+
+    # calculate electric ratepayer impact:
+    f = lambda r: eq.present_value_bill_savings_electric(r, measure, settings, first_year)
+
+    ratepayer_impact_electric = (
+        measure[['Quantity','IRkWh','RRkWh']].product() *
+        (measure.NTGRkWh + market_effects) *
+        annual_electric_rates.apply(f,axis='columns').aggregate(np.sum)
+    )
+
+    # calculate natural gas ratepayer impact:
+    f = lambda r: eq.present_value_bill_savings_gas(r, measure, settings, first_year)
+
+    ratepayer_impact_gas = (
+        measure[['Quantity','IRTherm','RRTherm']].product() *
+        (measure.NTGRTherm + market_effects) *
+        annual_gas_rates.apply(f,axis='columns').aggregate(np.sum)
+    )
+
+    # combine results for output:
+    return pd.Series({
+        'CET_ID' : measure.CET_ID,
+        'RatepayerImpactElectric' : ratepayer_impact_electric,
+        'RatepayerImpactGas'      : ratepayer_impact_gas,
+        'RatepayerImpactTotal'    : ratepayer_impact_electric + ratepayer_impact_gas,
+
+    })
 
 def calculate_weighted_benefits():
     pass

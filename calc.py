@@ -16,7 +16,7 @@ def calculate_measure_cost_effectiveness(cet_scenario):
     ### outputs:
     ###     pandas DataFrame with measure-level cost-effectiveness outputs
 
-    if cet_scenario.match_sql:
+    if cet_scenario.match_sql():
         agg = aggregation_match_sql
     else:
         agg = aggregation
@@ -51,27 +51,16 @@ def calculate_measure_cost_effectiveness(cet_scenario):
         avoided_electric_costs, on=['CET_ID','ProgramID','Qi']).merge(
         avoided_gas_costs, on=['CET_ID','ProgramID','Qi'])
 
-    if cet_scenario.match_sql:
+    if cet_scenario.match_sql():
         benefit_sums = pd.DataFrame({
-            'ProgramID'     : avoided_electric_costs.ProgramID,
-            'Qi'            : avoided_electric_costs.Qi,
-            'Count'         : 1,
-            'ElectricGross' : avoided_electric_costs.ElecBenGross,
-            'ElectricNet'   : avoided_electric_costs.ElecBenNet,
-            'GasGross'      : avoided_gas_costs.GasBenGross,
-            'GasNet'        : avoided_gas_costs.GasBenNet,
+            'ProgramID'             : avoided_electric_costs.ProgramID,
+            'Qi'                    : avoided_electric_costs.Qi,
+            'Count'                 : 1,
+            'ElectricBenefitsGross' : avoided_electric_costs.ElectricBenefitsGross,
+            'ElectricBenefitsNet'   : avoided_electric_costs.ElectricBenefitsNet,
+            'GasBenefitsGross'      : avoided_gas_costs.GasBenefitsGross,
+            'GasBenefitsNet'        : avoided_gas_costs.GasBenefitsNet,
         }).groupby(['ProgramID','Qi']).aggregate(np.sum)
-    else:
-        nonneg = lambda benefit: max(benefit,0)
-        benefit_sums = pd.DataFrame({
-            'ProgramID'     : avoided_electric_costs.ProgramID,
-            'Qi'            : avoided_electric_costs.Qi,
-            'Count'         : 1,
-            'ElectricGross' : avoided_electric_costs.ElecBenGross.map(nonneg),
-            'ElectricNet'   : avoided_electric_costs.ElecBenNet.map(nonneg),
-            'GasGross'      : avoided_gas_costs.GasBenGross.map(nonneg),
-            'GasNet'        : avoided_gas_costs.GasBenNet.map(nonneg),
-        }).groupby(by=['ProgramID','Qi']).aggregate(np.sum)
 
     programs = cet_scenario.InputPrograms.data.merge(benefit_sums, on=['ProgramID','Qi'])
 
@@ -81,19 +70,18 @@ def calculate_measure_cost_effectiveness(cet_scenario):
     f = lambda r: agg.program_administrator_cost_test(r, programs, cet_scenario.Settings, cet_scenario.first_year)
     program_administrator_cost_test_results = measures.apply(f, axis='columns')
 
-    bill_reduction_electric = 0
-    bill_reduction_gas = 0
-
-    ratepayer_cost = 0
+    f = lambda r: agg.ratepayer_impact_measure_test(r,cet_scenario.RateScheduleElectric,cet_scenario.RateScheduleGas,cet_scenario.Settings,cet_scenario.market_effects,cet_scenario.first_year)
+    ratepayer_impact_measure_test_results = measures.apply(f, axis='columns')
     
     weighted_benefits = 0
     weigted_electric_allocation = 0
     weighted_program_cost =0
 
-    outputs = avoided_electric_costs[['CET_ID','ElecBenGross','ElecBenNet']].merge(
-        avoided_gas_costs[['CET_ID','GasBenGross','GasBenNet']], on='CET_ID').merge(
+    outputs = avoided_electric_costs[['CET_ID','ElectricBenefitsGross','ElectricBenefitsNet']].merge(
+        avoided_gas_costs[['CET_ID','GasBenefitsGross','GasBenefitsNet']], on='CET_ID').merge(
         total_resource_cost_test_results, on='CET_ID').merge(
-        program_administrator_cost_test_results, on='CET_ID')
+        program_administrator_cost_test_results, on='CET_ID').merge(
+        ratepayer_impact_measure_test_results, on='CET_ID')
 
     return outputs
 
