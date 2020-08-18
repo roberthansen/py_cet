@@ -30,6 +30,7 @@ class EDCS_Connection:
         self.connection = pyodbc.connect(self.connection_str)
         self.cursor = self.connection.cursor()
     def fetch_sql(self,sql_str):
+        print('_' * 80)
         print('\nExecuting SQL Retreival Script:\n\n{}\'\n\t...'.format(sql_str),end='')
         start_time = datetime.datetime.now()
         results = pd.read_sql_query(sql_str,self.connection)

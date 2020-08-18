@@ -10,17 +10,17 @@ def setup_avoided_cost_electric(acc_electric_table_name, InputMeasures, user):
     if InputMeasures.source == 'database':
         # use the following query string when input measures are loaded into database:
         if InputMeasures.table_name == 'InputMeasure':
-            acc_elec_sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA+UPPER(TS)+UPPER(EU)+CZ\n\t' \
-                'IN (\n\t\tSELECT PA+UPPER(ElecTargetSector)+UPPER(ElecEndUseShape)+ClimateZone\n\t\t' \
+            sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + CZ\n\t' \
+                'IN (\n\t\tSELECT PA + \'|\' + UPPER(ElecTargetSector) + \'|\' + UPPER(ElecEndUseShape) + \'|\' + ClimateZone\n\t\t' \
                 'FROM InputMeasure\n\t)\n'.format(acc_electric_table_name)
         elif InputMeasures.table_name == 'InputMeasureCEDARS':
-            acc_elec_sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA+UPPER(TS)+UPPER(EU)+CZ\n\t' \
-                'IN (\n\t\tSELECT PA+UPPER(E3TargetSector)+UPPER(E3MeaElecEndUseShape)+E3ClimateZone\n\t\t' \
+            sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + CZ AS LookupKey\n\t' \
+                'IN (\n\t\tSELECT PA + \'|\' + UPPER(E3TargetSector) + \'|\' + UPPER(E3MeaElecEndUseShape) + \'|\' + E3ClimateZone\n\t\t' \
                 'FROM InputMeasureCEDARS\n\t)\n'.format(acc_electric_table_name)
     else:
         # use the following query string when input measures are from a file:
-        input_meta_data_elec = ',\n\t\t'.join(list(dict.fromkeys(['\''+'|'.join(r[1][['ProgramAdministrator','ElectricTargetSector','ElectricEndUse','ClimateZone']])+'\'' for r in InputMeasures.data.iterrows()])))
-        acc_elec_sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA+\'|\'+UPPER(TS)+\'|\'+UPPER(EU)+\'|\'+CZ\n\tIN (\n\t\t{}\n\t)\n'.format(acc_electric_table_name,input_meta_data_elec)
+        input_metadata_electric = ',\n\t\t'.join(list(dict.fromkeys(['\''+'|'.join(r[1][['ProgramAdministrator','ElectricTargetSector','ElectricEndUse','ClimateZone']])+'\'' for r in InputMeasures.data.iterrows()])))
+        sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + CZ\n\tIN (\n\t\t{}\n\t)\n'.format(acc_electric_table_name,input_metadata_electric)
 
     AvoidedCostElectric = EDCS_Query_Results(acc_elec_sql_str,user['id'],user['passwd'])
 

@@ -51,16 +51,15 @@ def calculate_measure_cost_effectiveness(cet_scenario):
         avoided_electric_costs, on=['CET_ID','ProgramID','Qi']).merge(
         avoided_gas_costs, on=['CET_ID','ProgramID','Qi'])
 
-    if cet_scenario.match_sql():
-        benefit_sums = pd.DataFrame({
-            'ProgramID'             : avoided_electric_costs.ProgramID,
-            'Qi'                    : avoided_electric_costs.Qi,
-            'Count'                 : 1,
-            'ElectricBenefitsGross' : avoided_electric_costs.ElectricBenefitsGross,
-            'ElectricBenefitsNet'   : avoided_electric_costs.ElectricBenefitsNet,
-            'GasBenefitsGross'      : avoided_gas_costs.GasBenefitsGross,
-            'GasBenefitsNet'        : avoided_gas_costs.GasBenefitsNet,
-        }).groupby(['ProgramID','Qi']).aggregate(np.sum)
+    benefit_sums = pd.DataFrame({
+        'ProgramID'             : avoided_electric_costs.ProgramID,
+        'Qi'                    : avoided_electric_costs.Qi,
+        'Count'                 : 1,
+        'ElectricBenefitsGross' : avoided_electric_costs.ElectricBenefitsGross,
+        'ElectricBenefitsNet'   : avoided_electric_costs.ElectricBenefitsNet,
+        'GasBenefitsGross'      : avoided_gas_costs.GasBenefitsGross,
+        'GasBenefitsNet'        : avoided_gas_costs.GasBenefitsNet,
+    }).groupby(['ProgramID','Qi']).aggregate(np.sum)
 
     programs = cet_scenario.InputPrograms.data.merge(benefit_sums, on=['ProgramID','Qi'])
 
