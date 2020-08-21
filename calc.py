@@ -35,17 +35,15 @@ def calculate_measure_cost_effectiveness(cet_scenario):
         Settings.metadata_filter = cet_scenario.Settings.metadata_filter
 
         # run parallelized apply functions:
-        avoided_electric_costs = MultiprocessingAvoidedCosts(InputMeasuresData, AvoidedCostElectric, Settings, agg.calculate_avoided_electric_costs, cet_scenario.first_year, cet_scenario.market_effects).calculate()
-        avoided_gas_costs = MultiprocessingAvoidedCosts(InputMeasuresData, AvoidedCostGas, Settings, agg.calculate_avoided_gas_costs, cet_scenario.first_year, cet_scenario.market_effects).calculate()
+        avoided_electric_costs = MultiprocessingAvoidedCosts(InputMeasuresData, AvoidedCostElectric, Settings, agg.calculate_avoided_electric_costs, cet_scenario.first_year).calculate()
+        avoided_gas_costs = MultiprocessingAvoidedCosts(InputMeasuresData, AvoidedCostGas, Settings, agg.calculate_avoided_gas_costs, cet_scenario.first_year).calculate()
     else:
-        f = lambda r: agg.calculate_avoided_electric_costs(r,cet_scenario.AvoidedCostElectric, cet_scenario.Settings, cet_scenario.first_year, cet_scenario.market_effects)
+        f = lambda r: agg.calculate_avoided_electric_costs(r,cet_scenario.AvoidedCostElectric, cet_scenario.Settings, cet_scenario.first_year)
         avoided_electric_costs = cet_scenario.InputMeasures.data.apply(f, axis='columns')
 
-        f = lambda r: agg.calculate_avoided_gas_costs(r, cet_scenario.AvoidedCostGas, cet_scenario.Settings, cet_scenario.first_year, cet_scenario.market_effects)
+        f = lambda r: agg.calculate_avoided_gas_costs(r, cet_scenario.AvoidedCostGas, cet_scenario.Settings, cet_scenario.first_year)
         avoided_gas_costs = cet_scenario.InputMeasures.data.apply(f, axis='columns')
 
-    avoided_electric_costs.CET_ID = avoided_electric_costs.CET_ID.map(int)
-    avoided_gas_costs.CET_ID = avoided_gas_costs.CET_ID.map(int)
 
     measures = cet_scenario.InputMeasures.data.merge(
         avoided_electric_costs, on=['CET_ID','ProgramID','Qi']).merge(
@@ -56,9 +54,13 @@ def calculate_measure_cost_effectiveness(cet_scenario):
         'Qi'                    : avoided_electric_costs.Qi,
         'Count'                 : 1,
         'ElectricBenefitsGross' : avoided_electric_costs.ElectricBenefitsGross,
+        'ElectricCostsGross'    : avoided_electric_costs.ElectricCostsGross,
         'ElectricBenefitsNet'   : avoided_electric_costs.ElectricBenefitsNet,
+        'ElectricCostsNet'      : avoided_electric_costs.ElectricCostsNet,
         'GasBenefitsGross'      : avoided_gas_costs.GasBenefitsGross,
+        'GasCostsGross'         : avoided_gas_costs.GasCostsGross,
         'GasBenefitsNet'        : avoided_gas_costs.GasBenefitsNet,
+        'GasCostsNet'           : avoided_gas_costs.GasBenefitsNet,
     }).groupby(['ProgramID','Qi']).aggregate(np.sum)
 
     programs = cet_scenario.InputPrograms.data.merge(benefit_sums, on=['ProgramID','Qi'])
@@ -69,18 +71,43 @@ def calculate_measure_cost_effectiveness(cet_scenario):
     f = lambda r: agg.program_administrator_cost_test(r, programs, cet_scenario.Settings, cet_scenario.first_year)
     program_administrator_cost_test_results = measures.apply(f, axis='columns')
 
-    f = lambda r: agg.ratepayer_impact_measure_test(r,cet_scenario.RateScheduleElectric,cet_scenario.RateScheduleGas,cet_scenario.Settings,cet_scenario.market_effects,cet_scenario.first_year)
-    ratepayer_impact_measure_test_results = measures.apply(f, axis='columns')
-    
+    f = lambda r: agg.ratepayer_impact_measure_test(r,cet_scenario.RateScheduleElectric,cet_scenario.RateScheduleGas,cet_scenario.Settings,cet_scenario.first_year)
+    ratepayer_impact_measure_test_results = measures.merge(program_administrator_cost_test_results,on='CET_ID').apply(f, axis='columns')
+
     weighted_benefits = 0
     weigted_electric_allocation = 0
     weighted_program_cost =0
 
-    outputs = avoided_electric_costs[['CET_ID','ElectricBenefitsGross','ElectricBenefitsNet']].merge(
-        avoided_gas_costs[['CET_ID','GasBenefitsGross','GasBenefitsNet']], on='CET_ID').merge(
-        total_resource_cost_test_results, on='CET_ID').merge(
-        program_administrator_cost_test_results, on='CET_ID').merge(
-        ratepayer_impact_measure_test_results, on='CET_ID')
+    if cet_scenario.match_sql():
+        outputs = pd.DataFrame({
+            'CET_ID'                : avoided_electric_costs.CET_ID,
+            'ElectricBenefitsGross' : avoided_electric_costs.ElectricBenefitsGross - avoided_electric_costs.ElectricCostsGross,
+            'ElectricBenefitsNet'   : avoided_electric_costs.ElectricBenefitsNet - avoided_electric_costs.ElectricCostsNet,
+        }).merge( pd.DataFrame({
+            'CET_ID'           : avoided_gas_costs.CET_ID,
+            'GasBenefitsGross' : avoided_gas_costs.GasBenefitsGross - avoided_gas_costs.GasCostsGross,
+            'GasBenefitsNet'   : avoided_gas_costs.GasBenefitsNet - avoided_gas_costs.GasCostsNet,
+            }), on='CET_ID').merge(
+            total_resource_cost_test_results, on='CET_ID').merge(
+            program_administrator_cost_test_results, on='CET_ID').merge(
+            ratepayer_impact_measure_test_results, on='CET_ID')
+    else:
+        outputs = pd.DataFrame({
+            'CET_ID'                : avoided_electric_costs.CET_ID,
+            'ElectricBenefitsGross' : avoided_electric_costs.ElectricBenefitsGross,
+            'ElectricBenefitsNet'   : avoided_electric_costs.ElectricBenefitsNet,
+            'ElectricCostsGross'    : avoided_electric_costs.ElectricCostsGross,
+            'ElectricCostsNet'      : avoided_electric_costs.ElectricCostsNet,
+        }).merge( pd.DataFrame({
+            'CET_ID'           : avoided_gas_costs.CET_ID,
+            'GasBenefitsGross' : avoided_gas_costs.GasBenefitsGross,
+            'GasBenefitsNet'   : avoided_gas_costs.GasBenefitsNet,
+            'GasCostsGross'    : avoided_gas_costs.GasCostsGross,
+            'GasCostsNet'      : avoided_gas_costs.GasCostsNet,
+            }), on='CET_ID').merge(
+            total_resource_cost_test_results, on='CET_ID').merge(
+            program_administrator_cost_test_results, on='CET_ID').merge(
+            ratepayer_impact_measure_test_results, on='CET_ID')
 
     return outputs
 
