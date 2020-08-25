@@ -278,7 +278,7 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
 
     # INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
     total_resource_cost_gross_no_admin = (
-        program_weighting_gross * present_value_external_costs +
+        present_value_external_costs +
         present_value_gross_participant_costs
     )
 
@@ -300,7 +300,8 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
 
     # INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
     total_resource_cost_net_no_admin = (
-        program_weighting_net * present_value_external_costs +
+        #program_weighting_net * present_value_program_costs +
+        present_value_external_costs +
         present_value_net_participant_costs
     )
 

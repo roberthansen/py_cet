@@ -231,9 +231,9 @@ def setup_input_programs(source,source_name,user):
     InputPrograms.append_columns(InputPrograms.data.apply(input_program_calculated_columns, axis='columns', result_type='expand'))
 
     # add method to get input program data filtered by a single input measure:
-    def filter_by_measure(self, input_measure):
+    def filter_by_measure(self, measure):
         filtered_input_programs = self.data.get(
-            (self.data.ProgramID == input_measure.ProgramID)
+            (self.data.ProgramID == measure.ProgramID)
         )
         return filtered_input_programs
     InputPrograms.filter_by_measure = \
@@ -254,9 +254,9 @@ def setup_settings(acc_version, InputMeasures, user):
     Settings.column_map('ProgramAdministrator',lambda s: s.strip())
 
     # add method to get settings data filtered by a single input measure:
-    def filter_by_measure(self, input_measure):
+    def filter_by_measure(self, measure):
         filtered_settings = self.data.get(
-            (self.data.ProgramAdministrator == input_measure.ProgramAdministrator)
+            (self.data.ProgramAdministrator == measure.ProgramAdministrator)
         )
         return filtered_settings
     Settings.filter_by_measure = types.MethodType(filter_by_measure,Settings)
@@ -321,14 +321,14 @@ def setup_avoided_cost_electric(acc_electric_table_name, InputMeasures, user):
     AvoidedCostElectric.append_columns(AvoidedCostElectric.data.apply(quarter_index,axis='columns',result_type='expand'))
 
     # add method to get avoided cost electric data filtered by a single input measure:
-    def filter_by_measure(self, input_measure):
+    def filter_by_measure(self, measure):
         filtered_avoided_costs_electric = self.data.get(
-            (self.data.ProgramAdministrator == input_measure.ProgramAdministrator) & \
-            (self.data.ElectricTargetSector == input_measure.ElectricTargetSector) & \
-            (self.data.ElectricEndUse == input_measure.ElectricEndUse) & \
-            (self.data.ClimateZone == input_measure.ClimateZone) & \
-            (self.data.Qi >= input_measure.Qi) & \
-            (self.data.Qi < input_measure.Qi + input_measure.EULq)
+            (self.data.ProgramAdministrator == measure.ProgramAdministrator) & \
+            (self.data.ElectricTargetSector == measure.ElectricTargetSector) & \
+            (self.data.ElectricEndUse == measure.ElectricEndUse) & \
+            (self.data.ClimateZone == measure.ClimateZone) & \
+            (self.data.Qi >= measure.Qi) & \
+            (self.data.Qi < measure.Qi + measure.EULq)
         )
         return filtered_avoided_costs_electric
     AvoidedCostElectric.filter_by_measure = \
@@ -388,13 +388,13 @@ def setup_avoided_cost_gas(acc_gas_table_name, InputMeasures, user):
     AvoidedCostGas.append_columns(AvoidedCostGas.data.apply(quarter_index,axis='columns',result_type='expand'))
 
     # add method to get avoided cost gas data filtered by a single input measure:
-    def filter_by_measure(self, input_measure):
+    def filter_by_measure(self, measure):
         filtered_avoided_costs_gas = self.data.get(
-            (self.data.ProgramAdministrator == input_measure.ProgramAdministrator) & \
-            (self.data.GasTargetSector == input_measure.GasTargetSector) & \
-            (self.data.GasSavingsProfile == input_measure.GasSavingsProfile) & \
-            (self.data.Qi >= input_measure.Qi) & \
-            (self.data.Qi < input_measure.Qi + input_measure.EULq)
+            (self.data.ProgramAdministrator == measure.ProgramAdministrator) & \
+            (self.data.GasTargetSector == measure.GasTargetSector) & \
+            (self.data.GasSavingsProfile == measure.GasSavingsProfile) & \
+            (self.data.Qi >= measure.Qi) & \
+            (self.data.Qi < measure.Qi + measure.EULq)
         )
         return filtered_avoided_costs_gas
     AvoidedCostGas.filter_by_measure = \
