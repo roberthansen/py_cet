@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from aggregation import ratepayer_impact_measure_test
+from aggregation import ratepayer_impact_measure
 import equations_match_sql as eq
 
 def calculate_avoided_electric_costs(measure, AvoidedCostElectric, Settings, first_year):
@@ -206,7 +206,7 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     present_value_external_costs = eq.present_value_external_costs(measure, quarterly_discount_rate, first_year)
 
     # calculate the present value of the incremental cost of the measure:
-    present_value_gross_incremental_cost = eq.present_value_gross_incremental_cost(measure, quarterly_measure_inflation_rate, quarterly_discount_rate, first_year)
+    present_value_gross_measure_cost = eq.present_value_gross_measure_cost(measure, quarterly_measure_inflation_rate, quarterly_discount_rate, first_year)
 
     # calculate present value of up- and mid-stream incentives and direct installation costs:
     present_value_incentives_and_direct_installation =  eq.present_value_incentives_and_direct_installation(measure, quarterly_discount_rate, first_year)
@@ -214,11 +214,14 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     # calculate present value of rebates to end-user:
     present_value_rebates = eq.present_value_rebates(measure, quarterly_discount_rate, first_year)
 
-    # calculate incentives in excess of measure cost (ONLY IN INCORRECT CALCULATIONS):
-    present_value_excess_incentives = eq.present_value_excess_incentives(measure, quarterly_discount_rate, first_year)
+    # calculate incentives in excess of measure cost (ONLY IN CALCULATIONS TO MATCH SQL VERSION):
+    present_value_excess_incentives = max( 0,
+        present_value_incentives_and_direct_installation -
+        present_value_gross_measure_cost
+    )
 
     present_value_gross_participant_costs = (
-        present_value_gross_incremental_cost +
+        present_value_gross_measure_cost +
         present_value_excess_incentives -
         (
             present_value_incentives_and_direct_installation +
@@ -229,16 +232,14 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     #INCORRECT CALCULATION WITH MISAPPLIED MARKET EFFECTS:
     present_value_net_participant_costs = (
         measure.NTGRCost * (
-            present_value_gross_incremental_cost +
+            present_value_gross_measure_cost +
             present_value_excess_incentives -
-            (
-                present_value_incentives_and_direct_installation +
-                present_value_rebates
-            )
+            present_value_incentives_and_direct_installation -
+            present_value_rebates
         ) +
         measure.MarketEffectsCosts *
         (
-            present_value_gross_incremental_cost +
+            present_value_gross_measure_cost +
             present_value_excess_incentives
         )
     )
@@ -256,7 +257,7 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
         'UserInputIncentive',
         'CostsRecoveredFromOtherSources',
     ]
-    # INCORRECT CALCULATIONS USING INSTALLATION YEAR TO MATCH SQL CODE:
+    #INCORRECT CALCULATIONS USING INSTALLATION YEAR TO MATCH SQL CODE:
     f = lambda r: r[program_cost_columns].sum() / annual_discount_rate ** (int(r.InstallationQuarter.split('Q')[0]) - first_year)
     present_value_program_costs = program.apply(f, axis='columns').aggregate(np.sum)
 
@@ -269,14 +270,14 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     else:
         program_weighting_gross = 1 / program_total.Count
 
-    # INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
+    #INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
     total_resource_cost_gross = (
         program_weighting_gross * present_value_program_costs +
         present_value_external_costs +
         present_value_gross_participant_costs
     )
 
-    # INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
+    #INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
     total_resource_cost_gross_no_admin = (
         present_value_external_costs +
         present_value_gross_participant_costs
@@ -291,21 +292,20 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     else:
         program_weighting_net = 1 / program_total.Count
 
-    # INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
+    #INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
     total_resource_cost_net = (
         program_weighting_net * present_value_program_costs +
         present_value_external_costs +
         present_value_net_participant_costs
     )
 
-    # INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
+    #INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
     total_resource_cost_net_no_admin = (
-        #program_weighting_net * present_value_program_costs +
         present_value_external_costs +
         present_value_net_participant_costs
     )
 
-    # INCORRECT APPLICATION OF NEGATIVE BENEFITS TO NUMERATOR OF RATIO:
+    #INCORRECT APPLICATION OF NEGATIVE BENEFITS TO NUMERATOR OF RATIO:
     if total_resource_cost_net != 0:
         total_resource_cost_ratio = (
             (
@@ -317,7 +317,7 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     else:
         total_resource_cost_ratio = 0
 
-    # INCORRECT APPLICATION OF NEGATIVE BENEFITS TO NUMERATOR OF RATIO:
+    #INCORRECT APPLICATION OF NEGATIVE BENEFITS TO NUMERATOR OF RATIO:
     if total_resource_cost_net_no_admin != 0:
         total_resource_cost_ratio_no_admin = (
             (
@@ -366,9 +366,6 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
     quarterly_discount_rate = 1 + settings.DiscountRateQtr
     annual_discount_rate = 1 + settings.DiscountRateAnnual
 
-    # calculate incentives in excess of measure cost (ONLY IN INCORRECT CALCULATIONS):
-    present_value_excess_incentives = eq.present_value_excess_incentives(measure, quarterly_discount_rate, first_year)
-
     # get measure inflation rate if present:
     try:
         quarterly_measure_inflation_rate = 1 + measure.MeasInflation / 4
@@ -388,7 +385,7 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
         'UserInputIncentive',
         'CostsRecoveredFromOtherSources',
     ]
-    # INCORRECT CALCULATION USING INSTALLATION YEAR INSTEAD OF QUARTER TO MATCH SQL CODE:
+    #INCORRECT CALCULATION USING INSTALLATION YEAR INSTEAD OF QUARTER TO MATCH SQL CODE:
     f = lambda r: r[program_cost_columns].sum() / annual_discount_rate ** (int(r.InstallationQuarter.split('Q')[0]) - first_year)
     present_value_program_costs = program.apply(f, axis='columns').aggregate(np.sum)
 
@@ -404,18 +401,18 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
     # calculate the present value of cost to external parties:
     present_value_external_costs = eq.present_value_external_costs(measure, quarterly_discount_rate, first_year)
 
-    # INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
+    #INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
     program_administrator_cost = (
         program_weighting * present_value_program_costs +
         present_value_external_costs
     )
 
-    # INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
+    #INCORRECT EXCLUSION OF NEGATIVE AVOIDED COSTS:
     program_administrator_cost_no_admin = (
         present_value_external_costs
     )
 
-    # INCORRECT APPLICATION OF NEGATIVE BENEFITS TO NUMERATOR OF RATIO:
+    #INCORRECT APPLICATION OF NEGATIVE BENEFITS TO NUMERATOR OF RATIO:
     if program_administrator_cost != 0:
         program_administrator_cost_ratio = (
             (
@@ -427,7 +424,7 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
     else:
         program_administrator_cost_ratio = 0
 
-    # INCORRECT APPLICATION OF NEGATIVE BENEFITS TO NUMERATOR OF RATIO:
+    #INCORRECT APPLICATION OF NEGATIVE BENEFITS TO NUMERATOR OF RATIO:
     if program_administrator_cost_no_admin != 0:
         program_administrator_cost_ratio_no_admin = (
             (

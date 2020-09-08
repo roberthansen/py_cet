@@ -8,13 +8,13 @@ import pandas as pd
 sample_data_directory = '/home/rhansen/src/python/sqlserver/SCE_July2020_Claims/'
 
 #cet_scenario = CET_Scenario(user=user, inputs_source='csv', input_measures_source_name=sample_data_directory+'MeasureSubset.csv', input_programs_source_name=sample_data_directory+'ProgramCost.csv', acc_version=2019, first_year=2019, market_effects_benefits=0.05, market_effects_costs=0.05, match_sql=True)
-cet_scenario = CET_Scenario(user=user, inputs_source='database', input_measures_source_name='InputMeasureCEDARS', input_programs_source_name='InputProgramCEDARS', acc_version=2018, first_year=2018, market_effects_benefits=0.05, market_effects_costs=0.05, parallelize=False, match_sql=True)
-cet_scenario_mp = CET_Scenario(user=user, inputs_source='database', input_measures_source_name='InputMeasureCEDARS', input_programs_source_name='InputProgramCEDARS', acc_version=2018, first_year=2018, market_effects_benefits=0.05, market_effects_costs=0.05, parallelize=True, match_sql=True)
+#cet_scenario = CET_Scenario(user=user, inputs_source='database', input_measures_source_name='InputMeasureCEDARS', input_programs_source_name='InputProgramCEDARS', acc_version=2018, first_year=2018, market_effects_benefits=0.05, market_effects_costs=0.05, parallelize=False, match_sql=True)
+cet_scenario_mp = CET_Scenario(user=user, inputs_source='database', input_measures_source_name='InputMeasureCEDARS', input_programs_source_name='InputProgramCEDARS', acc_version=2018, first_year=2018, market_effects_benefits=0.05, market_effects_costs=0.00, parallelize=True, match_sql=True)
 
-cet_scenario.run_cet()
+#cet_scenario.run_cet()
 cet_scenario_mp.run_cet()
 
-py_cet_output = cet_scenario.OutputMeasures.data
+py_cet_output = cet_scenario_mp.OutputMeasures.data
 
 sql_cet_output = EDCS_Query_Results('SELECT * FROM OutputCE WHERE JobID=10000 ORDER BY CET_ID',user['id'],user['passwd']).data
 

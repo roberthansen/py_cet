@@ -208,7 +208,7 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     present_value_external_costs = eq.present_value_external_costs(measure, quarterly_discount_rate, first_year)
 
     # calculate the present value of the incremental cost of the measure:
-    present_value_gross_incremental_cost = eq.present_value_gross_incremental_cost(measure, quarterly_measure_inflation_rate, quarterly_discount_rate, first_year)
+    present_value_gross_measure_cost = eq.present_value_gross_measure_cost(measure, quarterly_measure_inflation_rate, quarterly_discount_rate, first_year)
 
     # calculate present value of up- and mid-stream incentives and direct installation costs:
     present_value_incentives_and_direct_installation =  eq.present_value_incentives_and_direct_installation(measure, quarterly_discount_rate, first_year)
@@ -220,7 +220,7 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     present_value_excess_incentives = eq.present_value_excess_incentives(measure, quarterly_discount_rate, first_year)
 
     present_value_gross_participant_costs = (
-        present_value_gross_incremental_cost -
+        present_value_gross_measure_cost -
         (
             present_value_incentives_and_direct_installation +
             present_value_rebates
@@ -231,7 +231,7 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     present_value_net_participant_costs = (
         measure[['NTGRCost','MarketEffectsCosts']].sum() *
         (
-            present_value_gross_incremental_cost -
+            present_value_gross_measure_cost -
             (
                 present_value_incentives_and_direct_installation +
                 present_value_rebates
@@ -424,7 +424,7 @@ def program_administrator_cost_test(measure, programs, Settings, first_year):
         'ProgramAdministratorCostRatioNoAdmin' : program_administrator_cost_ratio_no_admin,
     })
 
-def ratepayer_impact_measure_test(measure, RateScheduleElectric, RateScheduleGas, Settings, first_year):
+def ratepayer_impact_measure(measure, RateScheduleElectric, RateScheduleGas, Settings, first_year):
     ### parameters:
     ###     measure : a pandas Series containing a single row from the
     ###         'data' pandas DataFrame in an 'InputMeasures' object of class

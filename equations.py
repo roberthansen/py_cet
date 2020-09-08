@@ -153,9 +153,9 @@ def present_value_external_costs(measure, quarterly_discount_rate, first_year):
     )
     return present_value_external_costs
 
-def present_value_gross_incremental_cost(measure, quarterly_measure_inflation_rate, quarterly_discount_rate, first_year):
+def present_value_gross_measure_cost(measure, quarterly_measure_inflation_rate, quarterly_discount_rate, first_year):
     if measure.RUL > 0:
-        present_value_gross_incremental_cost = (
+        present_value_gross_measure_cost = (
             measure.Quantity *
             (
                 measure.UnitGrossCost1 -
@@ -171,9 +171,11 @@ def present_value_gross_incremental_cost(measure, quarterly_measure_inflation_ra
             quarterly_discount_rate ** ( measure.Qi - first_year * 4 )
         )
     else:
-        present_value_gross_incremental_cost = 0
-
-    return present_value_gross_incremental_cost
+        present_value_gross_measure_cost = (
+            measure.Quantity * 
+            quarterly_discount_rate ** ( measure.Qi - 4 * first_year + 1)
+        )
+    return present_value_gross_measure_cost
 
 def present_value_incentives_and_direct_installation(measure, quarterly_discount_rate, first_year):
     present_value_incentives_and_direct_installation = (

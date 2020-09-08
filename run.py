@@ -46,6 +46,13 @@ class CET_Scenario:
     OutputMeasures = None
     OutputPrograms = None
     parallelize = False
+    calculation_times = {
+        'avoided_electric_costs'          : None,
+        'avoided_gas_costs'               : None,
+        'total_resource_cost_test'        : None,
+        'program_administrator_cost_test' : None,
+        'ratepayer_impact_measure'        : None,
+    }
     __match_sql__ = False
     __tbl__ = None
 
@@ -172,11 +179,13 @@ class CET_Scenario:
     def __str__(self):
         scenario_information = 'CET_Scenario\nACC Version:\t{}' \
             '\nFirst Year:\t{}\nMarket Effects Benefits:\t{}' \
-            '\nInput Measures:\t{}\nInput Programs:\t{}'.format(
+            '\nMarket Effects Costs:\t{}\nInput Measures:\t{}' \
+            '\nInput Programs:\t{}'.format(
                 self.acc_version,
                 self.first_year,
                 self.market_effects_benefits,
+                self.market_effects_costs,
                 len(self.InputMeasures.data.index),
                 len(self.InputPrograms.data.index)
             )
-        return 
+        return scenario_information

@@ -2,8 +2,10 @@ import datetime, pyodbc
 import numpy as np, pandas as pd
 # Note: this was tested in in a linux environment with a pyodbc library dependent
 #       on the ODBC driver provided with FreeTDS
-#       configuration files are saved to /etc/odbc.ini and
-#       /etc/freetds/freetds.conf
+#       configuration files are saved to:
+#           /etc/odbcinst.ini
+#           /etc/odbc.ini
+#           /etc/freetds/freetds.conf
 #       See https://gist.github.com/rduplain/1293636 for setup guide
 
 # defines connector class for accessing EDCS sql server:
@@ -86,7 +88,7 @@ class EDCS_Query_Results(SQL_Object):
         self.data = self.connection.fetch_sql(self.sql_str)
 
 # class representing a local file:
-class Local_CSV():
+class Local_CSV:
     source = ''
     file_name = ''
     data = pd.DataFrame()
