@@ -161,13 +161,13 @@ def calculate_avoided_gas_costs(measure, AvoidedCostGas, Settings, first_year):
         ),
         'GasBenefitsNet'   : max(
             measure[['Quantity','IRTherm','RRTherm']].product() *
-            measure[['NTGRkW','MarketEffectsBenefits']].sum() *
+            measure[['NTGRTherm','MarketEffectsBenefits']].sum() *
             pv_gas,
             0
         ),
         'GasCostsNet'      : max(
             -measure[['Quantity','IRTherm','RRTherm']].product() *
-            measure[['NTGRkW','MarketEffectsBenefits']].sum() *
+            measure[['NTGRTherm','MarketEffectsBenefits']].sum() *
             pv_gas,
             0
         ),
@@ -198,11 +198,18 @@ def calculate_emissions_reductions(measure, AvoidedCostElectric, Emissions, Sett
     avoided_cost_electric = AvoidedCostElectric.filter_by_measure(measure)
 
     # calculate raw per-unit quarterly emissions reductions due to electric savings:
-    if size(avoided_cost_electric) > 0:
+    if avoided_cost_electric.size > 0:
         f = lambda r: pd.Series(eq.emissions_reductions_electric(r, emissions, measure))
         emissions_reductions_electric = avoided_cost_electric.apply(f, axis='columns')
     else:
-        emissions_reductions_electric = pd.Series({'CO2':0,'NOx':0,'PM10':0})
+        emissions_reductions_electric = pd.DataFrame({
+            'CO2'  : [0],
+            'NOx'  : [0],
+            'PM10' : [0],
+        })
+
+    emissions_reductions_electric_first_year = emissions_reductions_electric.head(4).aggregate(np.sum)
+    emissions_reductions_electric_lifecycle = emissions_reductions_electric.aggregate(np.sum)
 
     # filter Settings table:
     settings = Settings.filter_by_measure(measure)
@@ -221,73 +228,74 @@ def calculate_emissions_reductions(measure, AvoidedCostElectric, Emissions, Sett
     gross_gas_coefficient = measure[['Quantity','IRTherm','RRTherm']].product()
     net_gas_coefficient = (
         gross_gas_coefficient *
-        measure[['NTGRTherm','MarketEffectsBenifts']].sum()
+        measure[['NTGRTherm','MarketEffectsBenefits']].sum()
     )
 
     emissions_reductions = pd.Series({
+        'CET_ID' : measure.CET_ID,
         'CO2GrossFirstYear' : (
             gross_electric_coefficient *
-            emissions_reductions_electric.CO2.head(4).aggregate(np.sum) +
+            emissions_reductions_electric_first_year.CO2 +
             gross_gas_coefficient *
             emissions_reductions_gas.CO2FirstYear
         ),
         'CO2GrossLifecycle' : (
             gross_electric_coefficient *
-            emissions_reductions_electric.CO2.aggregate(np.sum) +
+            emissions_reductions_electric_lifecycle.CO2 +
             gross_gas_coefficient *
             emissions_reductions_gas.CO2Lifecycle
         ),
         'CO2NetFirstYear' : (
             net_electric_coefficient *
-            emissions_reductions_electric.CO2.head(4).aggregate(np.sum) +
+            emissions_reductions_electric_first_year.CO2 +
             net_gas_coefficient *
             emissions_reductions_gas.CO2FirstYear
         ),
         'CO2NetLifecycle' : (
             net_electric_coefficient *
-            emissions_reductions_electric.CO2.aggregate(np.sum) +
+            emissions_reductions_electric_lifecycle.CO2 +
             net_gas_coefficient *
             emissions_reductions_gas.CO2Lifecycle
         ),
         'NOxGrossFirstYear' : (
             gross_electric_coefficient *
-            emissions_reductions_electric.NOx.head(4).aggregate(np.sum) +
+            emissions_reductions_electric_first_year.NOx +
             gross_gas_coefficient *
             emissions_reductions_gas.NOxFirstYear
         ),
         'NOxGrossLifecycle' : (
             gross_electric_coefficient *
-            emissions_reductions_electric.NOx.aggregate(np.sum) +
+            emissions_reductions_electric_lifecycle.NOx +
             gross_gas_coefficient *
             emissions_reductions_gas.NOxLifecycle
         ),
         'NOxNetFirstYear' : (
             net_electric_coefficient *
-            emissions_reductions_electric.NOx.head(4).aggregate(np.sum) +
+            emissions_reductions_electric_first_year.NOx +
             net_gas_coefficient *
             emissions_reductions_gas.NOxFirstYear
         ),
         'NOxNetLifecycle' : (
             net_electric_coefficient *
-            emissions_reductions_electric.NOx.aggregate(np.sum) +
+            emissions_reductions_electric_lifecycle.NOx +
             net_gas_coefficient *
             emissions_reductions_gas.NOxLifecycle
         ),
         'PM10GrossFirstYear' : (
             gross_gas_coefficient *
-            emissions_reductions_electric.PM10.head(4).aggregate(np.sum)
+            emissions_reductions_electric_first_year.PM10
         ),
         'PM10GrossLifecycle' : (
             gross_gas_coefficient *
-            emissions_reductions_electric.PM10.aggregate(np.sum)
+            emissions_reductions_electric_lifecycle.PM10
         ),
         'PM10NetFirstYear' : (
             net_electric_coefficient *
-            emissions_reductions_electric.PM10.head(4).aggregate(np.sum)
+            emissions_reductions_electric_first_year.PM10
         ),
         'PM10NetLifecycle' : (
             net_electric_coefficient *
-            emissions_reductions_electric.PM10.aggregate(np.sum)
+            emissions_reductions_electric_lifecycle.PM10
         ),
     })
 

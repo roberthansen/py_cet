@@ -140,7 +140,7 @@ def present_value_gas_benefits(avoided_cost_gas, measure, settings, first_year):
 
     return gas_benefits
 
-def emissions_reduction_electric(avoided_cost_electric, emissions, measure):
+def emissions_reductions_electric(avoided_cost_electric, emissions, measure):
     ### parameters:
     ###     avoided_cost_electric : a single row from the 'data' variable of an
     ###         'AvoidedCostElectric' object of class 'EDCS_Table' or
@@ -155,6 +155,8 @@ def emissions_reduction_electric(avoided_cost_electric, emissions, measure):
     ### returns:
     ###     a dictionary containing the CO2 and NOx reductions due to
     ###     electric savings attributed to the measure
+
+    emissions = emissions.iloc[0]
 
     measure_install = measure.Qi
     measure_phase_1 = measure.Qi + measure.EULq1
@@ -175,15 +177,15 @@ def emissions_reduction_electric(avoided_cost_electric, emissions, measure):
     else:
         annual_electric_savings_rate = 0
 
-    emissions_reduction_electric = {
-        'CO2' : annual_electric_savings_rate * avoided_cost_electric.CO2,
-        'NOx' : annual_electric_savings_rate * emissions.NOx,
+    emissions_reductions_electric = {
+        'CO2'  : annual_electric_savings_rate * avoided_cost_electric.CO2,
+        'NOx'  : annual_electric_savings_rate * emissions.NOx,
         'PM10' : annual_electric_savings_rate * emissions.PM10,
     }
 
-    return emissions_reduction_electric
+    return emissions_reductions_electric
 
-def emissions_reduction_gas(measure, settings):
+def emissions_reductions_gas(measure, settings):
     ###     measure : a single row from the 'data' variable of an
     ###         'InputMeasures' object of class 'EDCS_Table' or
     ###         'EDCS_Query_Results'
@@ -193,6 +195,8 @@ def emissions_reduction_gas(measure, settings):
     ### returns:
     ###     a dictionary containing the CO2, NOx, and PM10 reductions due to
     ###     natural gas savings attributed to the measure
+
+    settings = settings.iloc[0]
 
     if measure.RUL > 0:
         if measure.RUL >= 1:
@@ -211,7 +215,7 @@ def emissions_reduction_gas(measure, settings):
 
     lifecycle_gas = measure.Therm1 * measure.EUL1 + measure.Therm2 * measure.EUL2
 
-    emissions_reduction_gas = {
+    emissions_reductions_gas = {
         'CO2FirstYear' : first_year_gas * settings.CO2Gas,
         'CO2Lifecycle' : lifecycle_gas * settings.CO2Gas,
         'NOxFirstYear' : first_year_gas * settings.NOxGas,
