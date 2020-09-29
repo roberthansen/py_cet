@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from aggregation import ratepayer_impact_measure
+from aggregation import calculate_emissions_reductions, ratepayer_impact_measure
 import equations_match_sql as eq
 
 def calculate_avoided_electric_costs(measure, AvoidedCostElectric, Settings, first_year):
@@ -229,7 +229,7 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
         )
     )
 
-    #INCORRECT CALCULATION WITH MISAPPLIED MARKET EFFECTS:
+    #INCORRECT CALCULATION WITH MARKET EFFECTS APPLIED ONLY TO MEASURE COSTS AND EXCESS INCENTIVES:
     present_value_net_participant_costs = (
         measure.NTGRCost * (
             present_value_gross_measure_cost +

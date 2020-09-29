@@ -3,6 +3,7 @@ import types
 from models import EDCS_Connection, EDCS_Table, EDCS_Query_Results
 
 from tables import setup_input_programs, setup_settings, \
+    setup_emissions, \
     setup_output_measures, setup_output_programs, \
     setup_rate_schedule_electric, setup_rate_schedule_gas
 
@@ -150,7 +151,7 @@ def setup_input_measures(source, source_name, first_year, market_effects_benefit
 
     #INCORRECT OVERWRITE MEASURE-LEVEL MARKET EFFECTS TO MATCH SQL:
     InputMeasures.data.MarketEffectsBenefits = market_effects_benefits
-    InputMeasures.data.MarketEffectsCosts = market_effects_costs
+    InputMeasures.column_map('MarketEffectsCosts', lambda x: market_effects_costs if x is None else x)
 
     # helper function to calculate additional columns for input measure table:
     def input_measure_calculated_columns(data_frame_row):

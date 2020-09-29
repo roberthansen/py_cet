@@ -140,6 +140,86 @@ def present_value_gas_benefits(avoided_cost_gas, measure, settings, first_year):
 
     return gas_benefits
 
+def emissions_reduction_electric(avoided_cost_electric, emissions, measure):
+    ### parameters:
+    ###     avoided_cost_electric : a single row from the 'data' variable of an
+    ###         'AvoidedCostElectric' object of class 'EDCS_Table' or
+    ###         'EDCS_Query_Results'
+    ###     emissions : a single row from the 'data' variable of an
+    ###         'Emissions' object of class 'EDCS_Table' or
+    ###         'EDCS_Query_Results'
+    ###     measure : a single row from the 'data' variable of an
+    ###         'InputMeasures' object of class 'EDCS_Table' or
+    ###         'EDCS_Query_Results'
+    ###
+    ### returns:
+    ###     a dictionary containing the CO2 and NOx reductions due to
+    ###     electric savings attributed to the measure
+
+    measure_install = measure.Qi
+    measure_phase_1 = measure.Qi + measure.EULq1
+    measure_phase_2 = measure.Qi + measure.EULq2
+
+    avoided_cost_quarter = avoided_cost_electric.Qi
+
+    if measure_install <= avoided_cost_quarter and avoided_cost_quarter <= measure_phase_1 - 1:
+        annual_electric_savings_rate = measure.kWh1
+    elif measure_phase_1 - 1 < avoided_cost_quarter and avoided_cost_quarter < measure_phase_1:
+        quarter_fraction = measure.EULq1 % 1
+        annual_electric_savings_rate = measure.kWh1 * quarter_fraction + measure.kWh2 * (1 - quarter_fraction)
+    elif measure_phase_1 <= avoided_cost_quarter and avoided_cost_quarter <= measure_phase_2 - 1:
+        annual_electric_savings_rate = measure.kWh2
+    elif measure_phase_2 - 1 < avoided_cost_quarter and avoided_cost_quarter < measure_phase_2:
+        quarter_fraction = measure.EULq2 % 1
+        annual_electric_savings_rate = measure.kWh2 * quarter_fraction
+    else:
+        annual_electric_savings_rate = 0
+
+    emissions_reduction_electric = {
+        'CO2' : annual_electric_savings_rate * avoided_cost_electric.CO2,
+        'NOx' : annual_electric_savings_rate * emissions.NOx,
+        'PM10' : annual_electric_savings_rate * emissions.PM10,
+    }
+
+    return emissions_reduction_electric
+
+def emissions_reduction_gas(measure, settings):
+    ###     measure : a single row from the 'data' variable of an
+    ###         'InputMeasures' object of class 'EDCS_Table' or
+    ###         'EDCS_Query_Results'
+    ###     settings : a single row from the 'data' variable of a 'Settings'
+    ###         object of class 'EDCS_Table' or 'EDCS_Query_Results'
+    ###
+    ### returns:
+    ###     a dictionary containing the CO2, NOx, and PM10 reductions due to
+    ###     natural gas savings attributed to the measure
+
+    if measure.RUL > 0:
+        if measure.RUL >= 1:
+            first_year_gas = measure.Therm1 * 1
+        elif measure.EUL >=1:
+            first_year_gas = measure.Therm1 * measure.RUL + measure.Therm2 * measure.EUL
+        else:
+            first_year_gas = measure.Therm1 * measure.RUL + measure.Therm2 * (measure.EUL - measure.RUL)
+    elif measure.EUL > 0:
+        if measure.EUL >= 1:
+            first_year_gas = measure.Therm1 * 1
+        else:
+            first_year_gas = measure.Therm1 * measure.EUL
+    else:
+        first_year_gas = 0
+
+    lifecycle_gas = measure.Therm1 * measure.EUL1 + measure.Therm2 * measure.EUL2
+
+    emissions_reduction_gas = {
+        'CO2FirstYear' : first_year_gas * settings.CO2Gas,
+        'CO2Lifecycle' : lifecycle_gas * settings.CO2Gas,
+        'NOxFirstYear' : first_year_gas * settings.NOxGas,
+        'NOxLifecycle' : lifecycle_gas * settings.NOxGas,
+    }
+
+    return emissions_reductions_gas
+
 def present_value_external_costs(measure, quarterly_discount_rate, first_year):
     present_value_external_costs = (
         measure.Quantity *

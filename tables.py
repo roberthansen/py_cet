@@ -241,8 +241,8 @@ def setup_input_programs(source,source_name,user):
 
     return InputPrograms
 
-def setup_settings(acc_version, InputMeasures, user):
-    sql_str = 'SELECT * FROM E3Settings WHERE Version={}'.format(acc_version)
+def setup_settings(avoided_cost_calculator_version, InputMeasures, user):
+    sql_str = 'SELECT * FROM E3Settings WHERE Version={}'.format(avoided_cost_calculator_version)
     Settings = EDCS_Query_Results(sql_str,user['id'],user['passwd'])
 
     column_name_map = [
@@ -263,6 +263,72 @@ def setup_settings(acc_version, InputMeasures, user):
 
     return Settings
 
+def setup_emissions(avoided_cost_calculator_version, InputMeasures, user):
+    if avoided_cost_calculator_version == 2013:
+        emissions_table_name = 'E3Emissions2013'
+    else:
+        emissions_table_name = 'E3Emissions'
+
+    if InputMeasures.source == 'database':
+        if InputMeasures.table_name == 'InputMeasure':
+            sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
+                'UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + UPPER(CZ)' \
+                '\n\tIN (\n\t\tSELECT PA + \'|\' + UPPER(ElecTargetSector) + ' \
+                '\'|\' + UPPER(ElecEndUseShape) + \'|\' + UPPER(ClimateZone) ' \
+                'AS LookupKey\n\t\tFROM InputMeasure\n\t)\n\tAND Version={}' \
+                '\n'.format(emissions_table_name, avoided_cost_calculator_version)
+        elif InputMeasures.table_name == 'InputMeasureCEDARS':
+            sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
+                'UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + UPPER(CZ)' \
+                '\n\tIN (\n\t\tSELECT PA + \'|\' + UPPER(E3TargetSector) + ' \
+                '\'|\' + UPPER(E3MeaElecEndUseShape) + \'|\' + ' \
+                'UPPER(E3ClimateZone) AS LookupKey' \
+                '\n\t\tFROM InputMeasureCEDARS\n\t)\n\tAND Version={}' \
+                '\n'.format(emissions_table_name, avoided_cost_calculator_version)
+    else:
+        lookup_keys = ',\n\t\t'.join(list(dict.fromkeys([
+            '\''+'|'.join(r[1][[
+                'ProgramAdministrator',
+                'ElectricTargetSector',
+                'ElectricEndUse',
+                'ClimateZone'
+            ]])+'\'' for r in InputMeasures.data.iterrows()
+        ])))
+        sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
+            'UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + CZ' \
+            '\n\tIN (\n\t\t{}\n\t)\n\tAND Version={}' \
+            '\n'.format(emissions_table_name,lookup_keys,avoided_cost_calculator_version)
+
+    Emissions = EDCS_Query_Results(sql_str,user['id'],user['passwd'])
+
+    column_name_map = [
+        ['PA','ProgramAdministrator'],
+        ['TS','ElectricTargetSector'],
+        ['EU','ElectricEndUse'],
+        ['CZ','ClimateZone'],
+    ]
+
+    for old_name,new_name in column_name_map:
+        Emissions.rename_column(old_name,new_name)
+
+    # fix column formatting:
+    Emissions.column_map('ElectricTargetSector',lambda s: s.upper())
+    Emissions.column_map('ElectricEndUse',lambda s: s.upper())
+    Emissions.column_map('ClimateZone',lambda s: s.upper())
+
+    # add method to get emissions data filtered by single input measure:
+    def filter_by_measure(self, measure):
+        filtered_emissions = self.data.get(
+            (self.data.ProgramAdministrator == measure.ProgramAdministrator) & \
+            (self.data.ElectricTargetSector == measure.ElectricTargetSector) & \
+            (self.data.ElectricEndUse == measure.ElectricEndUse) & \
+            (self.data.ClimateZone == measure.ClimateZone) \
+        )
+        return filtered_emissions
+    Emissions.filter_by_measure = \
+        types.MethodType(filter_by_measure,Emissions)
+
+    return Emissions
 
 def setup_avoided_cost_electric(acc_electric_table_name, InputMeasures, user):
     if InputMeasures.source == 'database':
@@ -309,7 +375,7 @@ def setup_avoided_cost_electric(acc_electric_table_name, InputMeasures, user):
     for old_name,new_name in column_name_map:
         AvoidedCostElectric.rename_column(old_name,new_name)
 
-    # fix column formatting:
+    # standardize column formatting:
     AvoidedCostElectric.column_map('ElectricTargetSector',lambda s: s.upper())
     AvoidedCostElectric.column_map('ElectricEndUse',lambda s: s.upper())
     AvoidedCostElectric.column_map('ClimateZone',lambda s: s.upper())

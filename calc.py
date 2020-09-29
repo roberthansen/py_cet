@@ -38,6 +38,8 @@ def calculate_measure_cost_effectiveness(cet_scenario):
         avoided_gas_costs = MultiprocessingAvoidedCosts(InputMeasuresData, AvoidedCostGas, Settings, cet_scenario.first_year, agg.calculate_avoided_gas_costs).calculate()
         cet_scenario.calculation_times['avoided_gas_costs'] = (dt.now() - t_accg).total_seconds()
 
+        t_emiss = dt.now()
+
 
         calculation_time = sum([cet_scenario.calculation_times[s] for s in ['avoided_electric_costs','avoided_gas_costs']])
         print('< Benefits Calculation Time with Parallelization: {:.3f} seconds >'.format(calculation_time))
@@ -260,6 +262,16 @@ class SettingsTable(MultiprocessingTable):
             (self.data.ProgramAdministrator == measure.ProgramAdministrator)
         )
         return filtered_settings
+
+class EmissionsTable(MultiprocessingTable):
+    def filter_by_measure(self, measure):
+        filtered_emissions = self.data.get(
+            (self.data.ProgramAdministrator == measure.ProgramAdministrator) & \
+            (self.data.ElectricTargetSector == measure.ElectricTargetSector) & \
+            (self.data.ElectricEndUse == measure.ElectricEndUse) & \
+            (self.data.ClimateZone == measure.ClimateZone)
+        )
+        return filtered_emissions
 
 class AvoidedCostElectricTable(MultiprocessingTable):
     def filter_by_measure(self, measure):

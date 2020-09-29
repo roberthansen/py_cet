@@ -139,3 +139,8 @@ comparison = pd.DataFrame({
     'RIMCost_Diff' : comparison.RIMCost_SQL - comparison.RIMCost_PY,
     'RIMCost_PercentDiff' : (comparison.RIMCost_SQL - comparison.RIMCost_PY) / comparison.RIMCost_SQL,
 })
+
+comparison.to_csv('Comparison.csv')
+cet_scenario_mp.InputMeasures.data.to_csv('InputMeasures.csv')
+cet_scenario_mp.InputPrograms.data.to_csv('InputPrograms.csv')
+cet_scenario_mp.Settings.data.to_csv('Settings.csv')

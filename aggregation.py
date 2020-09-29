@@ -175,6 +175,125 @@ def calculate_avoided_gas_costs(measure, AvoidedCostGas, Settings, first_year):
 
     return avoided_gas_costs
 
+def calculate_emissions_reductions(measure, AvoidedCostElectric, Emissions, Settings):
+    ### parameters:
+    ###     measure : a pandas Series containing a single row from the
+    ###         'data' pandas DataFrame in an 'InputMeasures' object of class
+    ###         'EDCS_Table' or 'EDCS_Query_Results'
+    ###     AvoidedCostElectric : an instance of an 'AvoidedCostElectric' object
+    ###         of class 'EDCS_Table' or 'EDCS_Query_Results'
+    ###     Emissions : an instance of an 'Emissions' object of class 'EDCS_Table'
+    ###         or 'EDCS_Query_Results'
+    ###     Settings : an instance of a 'Settings' object of class 'EDCS_Table'
+    ###         or 'EDCS_Query_Results'
+    ###
+    ### returns:
+    ###     pandas Series containing calculated emissions reductions attributed
+    ###     to the measure
+
+    # filter emissions table:
+    emissions = Emissions.filter_by_measure(measure)
+
+    # filter avoided cost electric table:
+    avoided_cost_electric = AvoidedCostElectric.filter_by_measure(measure)
+
+    # calculate raw per-unit quarterly emissions reductions due to electric savings:
+    if size(avoided_cost_electric) > 0:
+        f = lambda r: pd.Series(eq.emissions_reductions_electric(r, emissions, measure))
+        emissions_reductions_electric = avoided_cost_electric.apply(f, axis='columns')
+    else:
+        emissions_reductions_electric = pd.Series({'CO2':0,'NOx':0,'PM10':0})
+
+    # filter Settings table:
+    settings = Settings.filter_by_measure(measure)
+
+    # calculate raw per-unit first year and lifecycle emissions reductions
+    # due to natural gas savings:
+    emissions_reductions_gas = pd.Series(
+        eq.emissions_reductions_gas(measure, settings)
+    )
+
+    gross_electric_coefficient = measure[['Quantity','IRkWh','RRkWh']].product()
+    net_electric_coefficient = (
+        gross_electric_coefficient *
+        measure[['NTGRkWh','MarketEffectsBenefits']].sum()
+    )
+    gross_gas_coefficient = measure[['Quantity','IRTherm','RRTherm']].product()
+    net_gas_coefficient = (
+        gross_gas_coefficient *
+        measure[['NTGRTherm','MarketEffectsBenifts']].sum()
+    )
+
+    emissions_reductions = pd.Series({
+        'CO2GrossFirstYear' : (
+            gross_electric_coefficient *
+            emissions_reductions_electric.CO2.head(4).aggregate(np.sum) +
+            gross_gas_coefficient *
+            emissions_reductions_gas.CO2FirstYear
+        ),
+        'CO2GrossLifecycle' : (
+            gross_electric_coefficient *
+            emissions_reductions_electric.CO2.aggregate(np.sum) +
+            gross_gas_coefficient *
+            emissions_reductions_gas.CO2Lifecycle
+        ),
+        'CO2NetFirstYear' : (
+            net_electric_coefficient *
+            emissions_reductions_electric.CO2.head(4).aggregate(np.sum) +
+            net_gas_coefficient *
+            emissions_reductions_gas.CO2FirstYear
+        ),
+        'CO2NetLifecycle' : (
+            net_electric_coefficient *
+            emissions_reductions_electric.CO2.aggregate(np.sum) +
+            net_gas_coefficient *
+            emissions_reductions_gas.CO2Lifecycle
+        ),
+        'NOxGrossFirstYear' : (
+            gross_electric_coefficient *
+            emissions_reductions_electric.NOx.head(4).aggregate(np.sum) +
+            gross_gas_coefficient *
+            emissions_reductions_gas.NOxFirstYear
+        ),
+        'NOxGrossLifecycle' : (
+            gross_electric_coefficient *
+            emissions_reductions_electric.NOx.aggregate(np.sum) +
+            gross_gas_coefficient *
+            emissions_reductions_gas.NOxLifecycle
+        ),
+        'NOxNetFirstYear' : (
+            net_electric_coefficient *
+            emissions_reductions_electric.NOx.head(4).aggregate(np.sum) +
+            net_gas_coefficient *
+            emissions_reductions_gas.NOxFirstYear
+        ),
+        'NOxNetLifecycle' : (
+            net_electric_coefficient *
+            emissions_reductions_electric.NOx.aggregate(np.sum) +
+            net_gas_coefficient *
+            emissions_reductions_gas.NOxLifecycle
+        ),
+        'PM10GrossFirstYear' : (
+            gross_gas_coefficient *
+            emissions_reductions_electric.PM10.head(4).aggregate(np.sum)
+        ),
+        'PM10GrossLifecycle' : (
+            gross_gas_coefficient *
+            emissions_reductions_electric.PM10.aggregate(np.sum)
+        ),
+        'PM10NetFirstYear' : (
+            net_electric_coefficient *
+            emissions_reductions_electric.PM10.head(4).aggregate(np.sum)
+        ),
+        'PM10NetLifecycle' : (
+            net_electric_coefficient *
+            emissions_reductions_electric.PM10.aggregate(np.sum)
+        ),
+    })
+
+    return emissions_reductions
+
+
 def total_resource_cost_test(measure, programs, Settings, first_year):
     ### parameters:
     ###     measure: a pandas Series containing a single row from a pandas

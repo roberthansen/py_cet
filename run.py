@@ -39,6 +39,7 @@ class CET_Scenario:
     InputMeasures = None
     InputProgram = None
     Settings = None
+    Emissions = None
     AvoidedCostElectric = None
     AvoidedCostGas = None
     RateScheduleElectric = None
@@ -111,6 +112,14 @@ class CET_Scenario:
                 self.user
             )
 
+    def setup_emissions(self):
+        self.Emissions = \
+            self.__tbl__.setup_emissions(
+                self.acc_version,
+                self.InputMeasures,
+                self.user
+            )
+
     def setup_avoided_cost_electric(self):
         self.AvoidedCostElectric = \
             self.__tbl__.setup_avoided_cost_electric(
@@ -147,6 +156,7 @@ class CET_Scenario:
         self.setup_input_measures()
         self.setup_input_programs()
         self.setup_settings()
+        self.setup_emissions()
         self.setup_avoided_cost_electric()
         self.setup_avoided_cost_gas()
         self.setup_rate_schedule_electric()

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from equations import present_value_bill_savings_electric, present_value_bill_savings_gas
+from equations import present_value_bill_savings_electric, present_value_bill_savings_gas, emissions_reduction_electric, emissions_reduction_gas
 
 # calculate the quarterly generation benefits per unit--installation and realization rates, and net-to-gross is handled in the calculate_avoided_electric_costs functions lower:
 def present_value_generation_benefits(avoided_cost_electric, measure, settings, first_year):
@@ -128,7 +128,7 @@ def present_value_gross_measure_cost(measure, quarterly_measure_inflation_rate, 
                 (
                     measure.UnitGrossCost1 -
                     measure.UnitGrossCost2
-                ) *
+                )*
                 (
                     quarterly_measure_inflation_rate /
                     quarterly_discount_rate
