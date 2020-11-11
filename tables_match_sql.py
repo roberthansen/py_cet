@@ -1,67 +1,114 @@
 import numpy as np
 import types
-from models import EDCS_Connection, EDCS_Table, EDCS_Query_Results
+from models import EDCS_Connection, EDCS_Table, EDCS_Query_Results, Local_CSV
 
 from tables import setup_input_programs, setup_settings, \
     setup_emissions, \
-    setup_output_measures, setup_output_programs, \
+    setup_combustion_types, \
+    setup_output_measures, setup_output_programs, setup_output_portfolio,\
     setup_rate_schedule_electric, setup_rate_schedule_gas
 
 from login import user
 
 def setup_input_measures(source, source_name, first_year, market_effects_benefits, market_effects_costs, user):
     if source == 'csv':
-        InputMeasures = Local_CSV(source_name)
+        InputMeasures = Local_CSV(source_name, delimiter=',')
     elif source == 'database':
         InputMeasures = EDCS_Table(source_name,user['id'],user['passwd'])
     else:
         InputMeasures = EDCS_Table('InputMeasureCEDARS',user['id'],user['passwd'])
 
     # fix input measure column name and type issues:
-    if InputMeasures.source == 'csv':
-        column_name_map = [
-            ['CEInputID','CET_ID'],
-            ['PrgID','ProgramID'],
-            ['ClaimYearQuarter','InstallationQuarter'],
-            ['Sector','ElectricTargetSector'],
-            ['BldgType','BuildingType'],
-            ['E3ClimateZone','ClimateZone'],
-            ['E3GasSavProfile','GasSavingsProfile'],
-            ['E3GasSector','GasTargetSector'],
-            ['E3MeaElecEndUseShape','ElectricEndUse'],
-            ['MeasAppType','MeasureApplicationType'],
-            ['MeasCode','MeasureCode'],
-            ['TechGroup','TechnologyGroup'],
-            ['TechType','TechnologyType'],
-            ['SourceDesc','SourceDescription'],
-            ['NumUnits','Quantity'],
-            ['UnitkW1stBaseline','kW1'],
-            ['UnitkWh1stBaseline','kWh1'],
-            ['UnitTherm1stBaseline','Therm1'],
-            ['UnitkW2ndBaseline','kW2'],
-            ['UnitkWh2ndBaseline','kWh2'],
-            ['UnitTherm2ndBaseline','Therm2'],
-            ['EUL_Yrs','EUL'],
-            ['RUL_Yrs','RUL'],
-            ['RealizationRatekW','RRkW'],
-            ['RealizationRatekWh','RRkWh'],
-            ['RealizationRateTherm','RRTherm'],
-            ['InstallationRatekW','IRkW'],
-            ['InstallationRatekWh','IRkWh'],
-            ['InstallationRateTherm','IRTherm'],
-            ['UnitMeaCost1stBaseline','UnitGrossCost1'],
-            ['UnitMeaCost2ndBaseline','UnitGrossCost2'],
-            ['UnitDirectInstallLab','UnitLaborCost'],
-            ['UnitDirectInstallMat','UnitMaterialsCost'],
-            ['PA','ProgramAdministrator'],
-            ['MeasInflation','AnnualInflationRate'],
-        ]
+    if source == 'csv':
+        if source_name.find('CEDARS') > 0:
+            column_name_map = [
+                ['CEInputID','CET_ID'],
+                ['PrgID','ProgramID'],
+                ['PA','ProgramAdministrator'],
+                ['MeasDescription','MeasureName'],
+                ['MeasImpactType','MeasureImpactType'],
+                ['E3TargetSector','ElectricTargetSector'],
+                ['E3MeaElecEndUseShape','ElectricEndUse'],
+                ['E3GasSavProfile','GasSavingsProfile'],
+                ['E3GasSector','GasTargetSector'],
+                ['E3ClimateZone','ClimateZone'],
+                ['RateScheduleElec','ElectricRateSchedule'],
+                ['RateScheduleGas','GasRateSchedule'],
+                ['ClaimYearQuarter','InstallationQuarter'],
+                ['NumUnits','Quantity'],
+                ['UnitkW1stBaseline','kW1'],
+                ['UnitkW2ndBaseline','kW2'],
+                ['UnitkWh1stBaseline','kWh1'],
+                ['UnitkWh2ndBaseline','kWh2'],
+                ['UnitTherm1stBaseline','Therm1'],
+                ['UnitTherm2ndBaseline','Therm2'],
+                ['EUL_Yrs','EUL'],
+                ['RUL_Yrs','RUL'],
+                ['InstallationRatekW','IRkW'],
+                ['InstallationRatekWh','IRkWh'],
+                ['InstallationRateTherm','IRTherm'],
+                ['RealizationRatekW','RRkW'],
+                ['RealizationRatekWh','RRkWh'],
+                ['RealizationRateTherm','RRTherm'],
+                ['MeasInflation','AnnualInflationRate'],
+                ['UnitMeaCost1stBaseline','UnitGrossCost1'],
+                ['UnitMeaCost2ndBaseline','UnitGrossCost2'],
+                ['UnitDirectInstallLab','UnitLaborCost'],
+                ['UnitDirectInstallMat','UnitMaterialsCost'],
+            ]
+        else:
+            column_name_map = [
+                ['CEInputID','CET_ID'],
+                ['PrgID','ProgramID'],
+                ['ClaimYearQuarter','InstallationQuarter'],
+                ['Sector','ElectricTargetSector'],
+                ['BldgType','BuildingType'],
+                ['E3ClimateZone','ClimateZone'],
+                ['E3GasSavProfile','GasSavingsProfile'],
+                ['E3GasSector','GasTargetSector'],
+                ['E3MeaElecEndUseShape','ElectricEndUse'],
+                ['MeasAppType','MeasureApplicationType'],
+                ['MeasCode','MeasureCode'],
+                ['TechGroup','TechnologyGroup'],
+                ['TechType','TechnologyType'],
+                ['SourceDesc','SourceDescription'],
+                ['NumUnits','Quantity'],
+                ['UnitkW1stBaseline','kW1'],
+                ['UnitkWh1stBaseline','kWh1'],
+                ['UnitTherm1stBaseline','Therm1'],
+                ['UnitkW2ndBaseline','kW2'],
+                ['UnitkWh2ndBaseline','kWh2'],
+                ['UnitTherm2ndBaseline','Therm2'],
+                ['EUL_Yrs','EUL'],
+                ['RUL_Yrs','RUL'],
+                ['RealizationRatekW','RRkW'],
+                ['RealizationRatekWh','RRkWh'],
+                ['RealizationRateTherm','RRTherm'],
+                ['InstallationRatekW','IRkW'],
+                ['InstallationRatekWh','IRkWh'],
+                ['InstallationRateTherm','IRTherm'],
+                ['UnitMeaCost1stBaseline','UnitGrossCost1'],
+                ['UnitMeaCost2ndBaseline','UnitGrossCost2'],
+                ['UnitDirectInstallLab','UnitLaborCost'],
+                ['UnitDirectInstallMat','UnitMaterialsCost'],
+                ['PA','ProgramAdministrator'],
+                ['MeasInflation','AnnualInflationRate'],
+            ]
         for old_name,new_name in column_name_map:
             InputMeasures.rename_column(old_name,new_name)
 
+        nan_columns = [
+            'ElectricTargetSector',
+            'GasSavingsProfile',
+            'GasTargetSector',
+            'ElectricEndUse',
+        ]
+        for nan_column in nan_columns:
+            InputMeasures.column_map(nan_column,lambda x: '' if x is np.nan else x)
+
     # fix input measure column name and type issues:
     else:
-        if InputMeasures.table_name == 'InputMeasure':
+        if source_name == 'InputMeasure':
             column_name_map = [
                 ['PrgID','ProgramID'],
                 ['PA','ProgramAdministrator'],
@@ -102,7 +149,7 @@ def setup_input_measures(source, source_name, first_year, market_effects_benefit
             })
             InputMeasures.append_columns(new_columns)
 
-        elif InputMeasures.table_name == 'InputMeasureCEDARS':
+        elif source_name.find('CEDARS') > 0:
             column_name_map = [
                 ['CEInputID','CET_ID'],
                 ['PrgID','ProgramID'],
@@ -190,45 +237,97 @@ def setup_input_measures(source, source_name, first_year, market_effects_benefit
 
     return InputMeasures
 
-def setup_avoided_cost_electric(acc_electric_table_name, InputMeasures, user):
-    if InputMeasures.source == 'database':
-        # use the following query string when input measures are loaded into database:
-        if InputMeasures.table_name == 'InputMeasure':
-            sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
-                'UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + UPPER(CZ)\n\t' \
-                'IN (\n\t\tSELECT PA + \'|\' + UPPER(ElecTargetSector) + ' \
-                '\'|\' + UPPER(ElecEndUseShape) + \'|\' + ' \
-                'UPPER(ClimateZone)\n\t\t' \
-                'FROM InputMeasure\n\t)\n'.format(acc_electric_table_name)
-        elif InputMeasures.table_name == 'InputMeasureCEDARS':
-            sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
-                'UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + UPPER(CZ)\n\t' \
-                'IN (\n\t\tSELECT' \
-                '\n\t\t\tPA + \'|\' + UPPER(E3TargetSector) + \'|\' + ' \
-                'UPPER(E3MeaElecEndUseShape) + \'|\' + ' \
-                'UPPER(E3ClimateZone) AS LookupKey\n\t\t' \
-                'FROM InputMeasureCEDARS\n\t)\n'.format(acc_electric_table_name)
-    else:
-        # use the following query string when input measures are from a file:
-        lookup_keys = ',\n\t\t'.join(
-            list(
-                dict.fromkeys([
-                    '\''+'|'.join(
-                        r[1][[
-                            'ProgramAdministrator',
-                            'ElectricTargetSector',
-                            'ElectricEndUse',
-                            'ClimateZone'
-                        ]]
-                    )+'\'' for r in InputMeasures.data.iterrows()
-                ])
-            )
-        )
-        sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + '\
-            'UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + UPPER(CZ)' \
-            '\n\tIN (\n\t\t{}\n\t)\n'.format(acc_electric_table_name,lookup_keys)
+def setup_avoided_cost_electric(acc_source, source_name, InputMeasures, user):
+    ### parameters:
+    ###     acc_source : a string, either 'csv' or 'database', indicating whether
+    ###         the avoided cost electric table should be retrieved from a 
+    ###         comma separated value text file or a Microsoft SQL Server
+    ###         database
+    ###     source_name : a string containing the file path if source is 'csv'
+    ###         or the database object name if source is 'database'
+    ###     InputMeasures : an instance of an 'InputMeasures' object of class
+    ###         'EDCS_Table' or 'EDCS_Query_Results'
+    ###     user : a dictionary containing items labelled 'id' and 'passwd'
+    ###         which provide login credentials for the database if needed
 
-    AvoidedCostElectric = EDCS_Query_Results(sql_str,user['id'],user['passwd'])
+    if acc_source == 'csv':
+        if InputMeasures.source == 'database':
+            if InputMeasures.table_name == 'InputMeasure':
+                sql_str = '\n\tSELECT DISTINCT\n\t\tPA + \'|\' + ' \
+                    'UPPER(ElecTargetSector) + \'|\' + ' \
+                    'UPPER(ElecEndUseShape) + \'|\' + ' \
+                    'UPPER(ClimateZone) AS LookupKey' \
+                    '\n\tFROM InputMeasure\n'
+            elif InputMeasures.table_name == 'InputMeasureCEDARS':
+                sql_str = '\n\tSELECT DISTINCT\n\t\tPA + \'|\' + ' \
+                    'UPPER(E3TargetSector) + \'|\' + ' \
+                    'UPPER(E3MeaElecEndUseShape) + \'|\' + ' \
+                    'UPPER(E3ClimateZone) AS LookupKey' \
+                    '\n\tFROM InputMeasureCEDARS\n'
+            lookup_keys = list(
+                EDCS_Query_Results(
+                    sql_str,
+                    user['id'],
+                    user['passwd']
+                ).data.LookupKey
+            )
+        else:
+            lookup_keys = list(dict.fromkeys([
+                '|'.join(r[1][[
+                    'ProgramAdministrator',
+                    'ElectricTargetSector',
+                    'ElectricEndUse',
+                    'ClimateZone'
+                ]]) for r in InputMeasures.data.iterrows()
+            ]))
+        def filter_function(dataframe_chunk):
+            f = lambda r: r['PA'] + '|' + r['TS'].upper() + '|' + r['EU'].upper() + '|' + str(r['CZ']) in lookup_keys
+            return dataframe_chunk.apply(f,axis='columns')
+        AvoidedCostElectric = Local_CSV(
+            source_name,
+            delimiter=',',
+            filter_csv=True,
+            filter_function=filter_function
+        )
+    else:
+        if InputMeasures.source == 'database':
+            # use the following query string when input measures are loaded into database:
+            if InputMeasures.table_name == 'InputMeasure':
+                sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
+                    'UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + UPPER(CZ)\n\t' \
+                    'IN (\n\t\tSELECT PA + \'|\' + UPPER(ElecTargetSector) + ' \
+                    '\'|\' + UPPER(ElecEndUseShape) + \'|\' + ' \
+                    'UPPER(ClimateZone)\n\t\t' \
+                    'FROM InputMeasure\n\t)\n'.format(source_name)
+            elif InputMeasures.table_name == 'InputMeasureCEDARS':
+                sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
+                    'UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + UPPER(CZ)\n\t' \
+                    'IN (\n\t\tSELECT' \
+                    '\n\t\t\tPA + \'|\' + UPPER(E3TargetSector) + \'|\' + ' \
+                    'UPPER(E3MeaElecEndUseShape) + \'|\' + ' \
+                    'UPPER(E3ClimateZone) AS LookupKey\n\t\t' \
+                    'FROM InputMeasureCEDARS\n\t)\n'.format(source_name)
+        else:
+            # use the following query string when input measures are from a file:
+            lookup_keys = ',\n\t\t'.join(
+                list(
+                    dict.fromkeys([
+                        '\''+'|'.join(
+                            r[1][[
+                                'ProgramAdministrator',
+                                'ElectricTargetSector',
+                                'ElectricEndUse',
+                                'ClimateZone'
+                            ]]
+                        )+'\'' for r in InputMeasures.data.iterrows()
+                    ])
+                )
+            )
+            sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + '\
+                'UPPER(TS) + \'|\' + UPPER(EU) + \'|\' + UPPER(CZ)' \
+                '\n\tIN (\n\t\t{}\n\t)\n'.format(source_name,lookup_keys)
+
+        AvoidedCostElectric = EDCS_Query_Results(sql_str,user['id'],user['passwd'])
 
     rename_columns = [
         ['PA','ProgramAdministrator'],
@@ -243,7 +342,7 @@ def setup_avoided_cost_electric(acc_electric_table_name, InputMeasures, user):
     # fix column formatting:
     AvoidedCostElectric.column_map('ElectricTargetSector',lambda s: s.upper())
     AvoidedCostElectric.column_map('ElectricEndUse',lambda s: s.upper())
-    AvoidedCostElectric.column_map('ClimateZone',lambda s: s.upper())
+    AvoidedCostElectric.column_map('ClimateZone',lambda s: str(s).upper())
 
     # apply universal quarter indices:
     def quarter_index(r):
@@ -267,41 +366,86 @@ def setup_avoided_cost_electric(acc_electric_table_name, InputMeasures, user):
 
     return AvoidedCostElectric
 
-def setup_avoided_cost_gas(acc_gas_table_name, InputMeasures, user):
-    if InputMeasures.source == 'database':
-        # use the following query string when input measures are loaded into database:
-        if InputMeasures.table_name == 'InputMeasure':
-            sql_str = 'SELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
-                'UPPER(GS) + \'|\' + UPPER(GP)\n\t' \
-                'IN (\n\t\tSELECT PA + UPPER(GasSector) + \'|\' + ' \
-                'UPPER(GasSavingsProfile)\n\t\t' \
-                'FROM InputMeasure\n\t)\n'.format(acc_gas_table_name)
-        elif InputMeasures.table_name == 'InputMeasureCEDARS':
-            sql_str = 'SELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
-                'UPPER(GS) + \'|\' + UPPER(GP)\n\t' \
-                'IN (\n\t\tSELECT PA + \'|\' + UPPER(E3GasSector) + ' \
-                '\'|\' + UPPER(E3GasSavProfile)\n\t\t' \
-                'FROM InputMeasureCEDARS\n\t)\n'.format(acc_gas_table_name)
+def setup_avoided_cost_gas(acc_source, source_name, InputMeasures, user):
+    ### parameters:
+    ###     acc_source : a string, either 'csv' or 'database', indicating whether
+    ###         the avoided cost electric table should be retrieved from a 
+    ###         comma separated value text file or a Microsoft SQL Server
+    ###         database
+    ###     source_name : a string containing the file path if source is 'csv'
+    ###         or the database object name if source is 'database'
+    ###     InputMeasures : an instance of an 'InputMeasures' object of class
+    ###         'EDCS_Table' or 'EDCS_Query_Results'
+    ###     user : a dictionary containing items labelled 'id' and 'passwd'
+    ###         which provide login credentials for the database if needed
+
+    if acc_source == 'csv':
+        if InputMeasures.source == 'database':
+            if InputMeasures.table_name == 'InputMeasure':
+                sql_str = '\n\tSELECT DISTINCT\n\t\tPA + \'|\' + ' \
+                    'UPPER(GasSector) + \'|\' + UPPER(GasSavingsProfile) ' \
+                    'AS LookupKey\n\tFROM InputMeasure\n'
+            elif InputMeasures.table_name == 'InputMeasureCEDARS':
+                sql_str = '\n\tSELECT DISTINCT\n\t\tPA + \'|\' + ' \
+                    'UPPER(E3GasSector) + \'|\' + UPPER(GasSavProfile) AS ' \
+                    'LookupKey\n\tFROM InputMeasureCEDARS\n'
+            lookup_keys = list(
+                EDCS_Query_Results(
+                    sql_str,
+                    user['id'],
+                    user['passwd']
+                ).data.LookupKey
+            )
+        else:
+            lookup_keys = list(dict.fromkeys([
+                '|'.join(r[1][[
+                    'ProgramAdministrator',
+                    'GasTargetSector',
+                    'GasSavingsProfile',
+                ]]) for r in InputMeasures.data.iterrows()
+            ]))
+        def filter_function(dataframe_chunk):
+            f = lambda r: r['PA'] + '|' + r['GS'].upper() + '|' + r['GP'].upper() in lookup_keys
+            return dataframe_chunk.apply(f, axis='columns')
+        AvoidedCostGas = Local_CSV(
+            source_name,
+            delimiter=',',
+            filter_csv=True,
+            filter_function=filter_function
+        )
     else:
-        lookup_keys = ',\n\t\t'.join(
-            list(
-                dict.fromkeys(
-                    ['\''+'|'.join(
-                        r[1][[
-                            'ProgramAdministrator',
-                            'GasTargetSector',
-                            'GasSavingsProfile',
-                        ]]
-                    )+'\'' for r in InputMeasures.data.iterrows()]
+        if InputMeasures.source == 'database':
+            # use the following query string when input measures are loaded into database:
+            if InputMeasures.table_name == 'InputMeasure':
+                sql_str = 'SELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
+                    'UPPER(GS) + \'|\' + UPPER(GP)\n\t' \
+                    'IN (\n\t\tSELECT PA + UPPER(GasSector) + \'|\' + ' \
+                    'UPPER(GasSavingsProfile)\n\t\t' \
+                    'FROM InputMeasure\n\t)\n'.format(source_name)
+            elif InputMeasures.table_name == 'InputMeasureCEDARS':
+                sql_str = 'SELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
+                    'UPPER(GS) + \'|\' + UPPER(GP)\n\t' \
+                    'IN (\n\t\tSELECT PA + \'|\' + UPPER(E3GasSector) + ' \
+                    '\'|\' + UPPER(E3GasSavProfile)\n\t\t' \
+                    'FROM InputMeasureCEDARS\n\t)\n'.format(source_name)
+        else:
+            lookup_keys = ',\n\t\t'.join(
+                list(
+                    dict.fromkeys(
+                        ['\''+'|'.join(
+                            r[1][[
+                                'ProgramAdministrator',
+                                'GasTargetSector',
+                                'GasSavingsProfile',
+                            ]]
+                        )+'\'' for r in InputMeasures.data.iterrows()]
+                    )
                 )
             )
-        )
-        sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
-            'UPPER(GS) + \'|\' + UPPER(GP)' \
-            '\n\tIN (\n\t\t{}\n\t)\n'.format(acc_gas_table_name,lookup_keys)
-
-    # use the following alternative query string when input measures are loaded into database:
-    AvoidedCostGas = EDCS_Query_Results(sql_str,user['id'],user['passwd'])
+            sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE PA + \'|\' + ' \
+                'UPPER(GS) + \'|\' + UPPER(GP)' \
+                '\n\tIN (\n\t\t{}\n\t)\n'.format(source_name,lookup_keys)
+        AvoidedCostGas = EDCS_Query_Results(sql_str,user['id'],user['passwd'])
 
     rename_columns = [
         ['PA','ProgramAdministrator'],

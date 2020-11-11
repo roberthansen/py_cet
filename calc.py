@@ -1,6 +1,6 @@
 import os, types, numpy as np, pandas as pd
 from datetime import datetime as dt
-import aggregation, aggregation_match_sql
+import measure_calculations, measure_calculations_match_sql
 
 import os
 import multiprocessing as mp
@@ -17,26 +17,27 @@ def calculate_measure_cost_effectiveness(cet_scenario):
     ###     pandas DataFrame with measure-level cost-effectiveness outputs
 
     if cet_scenario.match_sql():
-        agg = aggregation_match_sql
+        mc = measure_calculations_match_sql
     else:
-        agg = aggregation
+        mc = measure_calculations
 
     if cet_scenario.parallelize:
         # create objects without pyodbc connections:
         InputMeasuresData = cet_scenario.InputMeasures.data
-        Settings = SettingsTable(cet_scenario.Settings.data)
         Emissions = EmissionsTable(cet_scenario.Emissions.data)
+        CombustionTypes = CombustionTypesTable(cet_scenario.CombustionTypes.data)
+        Settings = SettingsTable(cet_scenario.Settings.data)
         AvoidedCostElectric = AvoidedCostElectricTable(cet_scenario.AvoidedCostElectric.data)
         AvoidedCostGas = AvoidedCostGasTable(cet_scenario.AvoidedCostGas.data)
 
         # run parallelized apply functions:
         ## avoided costs:
         t_acce = dt.now()
-        avoided_electric_costs = MultiprocessingAvoidedCosts(InputMeasuresData, AvoidedCostElectric, Settings, cet_scenario.first_year, agg.calculate_avoided_electric_costs).calculate()
+        avoided_electric_costs = MultiprocessingAvoidedCosts(InputMeasuresData, AvoidedCostElectric, Settings, cet_scenario.first_year, mc.calculate_avoided_electric_costs).calculate()
         cet_scenario.calculation_times['avoided_electric_costs'] = (dt.now() - t_acce).total_seconds()
 
         t_accg = dt.now()
-        avoided_gas_costs = MultiprocessingAvoidedCosts(InputMeasuresData, AvoidedCostGas, Settings, cet_scenario.first_year, agg.calculate_avoided_gas_costs).calculate()
+        avoided_gas_costs = MultiprocessingAvoidedCosts(InputMeasuresData, AvoidedCostGas, Settings, cet_scenario.first_year, mc.calculate_avoided_gas_costs).calculate()
         cet_scenario.calculation_times['avoided_gas_costs'] = (dt.now() - t_accg).total_seconds()
 
         calculation_time = sum([cet_scenario.calculation_times[s] for s in ['avoided_electric_costs','avoided_gas_costs']])
@@ -44,7 +45,7 @@ def calculate_measure_cost_effectiveness(cet_scenario):
 
         ## emissions reductions:
         t_emiss = dt.now()
-        emissions_reductions = MultiprocessingEmissionsReductions(InputMeasuresData, AvoidedCostElectric, Emissions, Settings, agg.calculate_emissions_reductions).calculate()
+        emissions_reductions = MultiprocessingEmissionsReductions(InputMeasuresData, AvoidedCostElectric, Emissions, CombustionTypes, Settings, mc.calculate_emissions_reductions).calculate()
         calculation_time = (dt.now() - t_emiss).total_seconds()
         cet_scenario.calculation_times['emissions_reductions'] = calculation_time
         print('< Emissions Reductions Calculation Time with Parallelization: {:.3f} seconds >'.format(calculation_time))
@@ -53,23 +54,24 @@ def calculate_measure_cost_effectiveness(cet_scenario):
         # run standard serial apply functions:
         ## avoided costs:
         t_acce = dt.now()
-        f = lambda r: agg.calculate_avoided_electric_costs(r, cet_scenario.AvoidedCostElectric, cet_scenario.Settings, cet_scenario.first_year)
+        f = lambda r: mc.calculate_avoided_electric_costs(r, cet_scenario.AvoidedCostElectric, cet_scenario.Settings, cet_scenario.first_year)
         avoided_electric_costs = cet_scenario.InputMeasures.data.apply(f, axis='columns')
         cet_scenario.calculation_times['avoided_electric_costs'] = (dt.now() - t_acce).total_seconds()
 
         t_accg = dt.now()
-        f = lambda r: agg.calculate_avoided_gas_costs(r, cet_scenario.AvoidedCostGas, cet_scenario.Settings, cet_scenario.first_year)
+        f = lambda r: mc.calculate_avoided_gas_costs(r, cet_scenario.AvoidedCostGas, cet_scenario.Settings, cet_scenario.first_year)
         avoided_gas_costs = cet_scenario.InputMeasures.data.apply(f, axis='columns')
         cet_scenario.calculation_times['avoided_gas_costs'] = (dt.now() - t_accg).total_seconds()
 
         calculation_time = sum([cet_scenario.calculation_times[s] for s in ['avoided_electric_costs','avoided_gas_costs']])
         print('< Benefits Calculation Time without Parallelization: {:.3f} seconds >'.format(calculation_time))
 
-        ## emissions:
+        ## emissions reductions:
         t_emiss = dt.now()
-        f = lambda r: agg.calculate_emissions_reductions(r, cet_scenario.AvoidedCostElectric, cet_scenario.Settings)
+        f = lambda r: mc.calculate_emissions_reductions(r, cet_scenario.AvoidedCostElectric, cet_scenario.Emissions, cet_scenario.CombustionTypes, cet_scenario.Settings)
         emissions_reductions = cet_scenario.InputMeasures.data.apply(f, axis='columns')
         calculation_time  = (dt.now() - t_emiss).total_seconds()
+        print('< Emissions Reductions Calculation Time without Parallelization: {:.3f} seconds >'.format(calculation_time))
 
     measures = cet_scenario.InputMeasures.data.merge(
         avoided_electric_costs, on=['CET_ID','ProgramID','Qi']
@@ -95,10 +97,10 @@ def calculate_measure_cost_effectiveness(cet_scenario):
 
     if cet_scenario.parallelize:
         t_trc = dt.now()
-        total_resource_cost_test_results = MultiprocessingCostTest(measures, programs, Settings, cet_scenario.first_year, agg.total_resource_cost_test).calculate()
+        total_resource_cost_test_results = MultiprocessingCostTest(measures, programs, Settings, cet_scenario.first_year, mc.total_resource_cost_test).calculate()
         cet_scenario.calculation_times['total_resource_cost_test'] = (dt.now() - t_trc).total_seconds()
         t_pac = dt.now()
-        program_administrator_cost_test_results = MultiprocessingCostTest(measures, programs, Settings, cet_scenario.first_year, agg.program_administrator_cost_test).calculate()
+        program_administrator_cost_test_results = MultiprocessingCostTest(measures, programs, Settings, cet_scenario.first_year, mc.program_administrator_cost_test).calculate()
         cet_scenario.calculation_times['program_administrator_cost_test'] = (dt.now() - t_pac).total_seconds()
 
         RateScheduleElectric = RateScheduleElectricTable(cet_scenario.RateScheduleElectric.data)
@@ -107,7 +109,7 @@ def calculate_measure_cost_effectiveness(cet_scenario):
         measures = measures.merge(program_administrator_cost_test_results,on='CET_ID')
 
         t_rim = dt.now()
-        ratepayer_impact_measure_results = MultiprocessingRatepayerImpactMeasure(measures, RateScheduleElectric, RateScheduleGas, Settings, cet_scenario.first_year, agg.ratepayer_impact_measure).calculate()
+        ratepayer_impact_measure_results = MultiprocessingRatepayerImpactMeasure(measures, RateScheduleElectric, RateScheduleGas, Settings, cet_scenario.first_year, mc.ratepayer_impact_measure).calculate()
         cet_scenario.calculation_times['ratepayer_impact_measure'] = (dt.now() - t_pac).total_seconds()
 
         calculation_time = sum([cet_scenario.calculation_times[s] for s in ['total_resource_cost_test','program_administrator_cost_test','ratepayer_impact_measure']])
@@ -116,19 +118,19 @@ def calculate_measure_cost_effectiveness(cet_scenario):
 
     else:
         t_trc = dt.now()
-        f = lambda r: agg.total_resource_cost_test(r, programs, cet_scenario.Settings, cet_scenario.first_year)
+        f = lambda r: mc.total_resource_cost_test(r, programs, cet_scenario.Settings, cet_scenario.first_year)
         total_resource_cost_test_results = measures.apply(f, axis='columns')
         cet_scenario.calculation_times['total_resource_cost_test'] = (dt.now() - t_trc).total_seconds()
 
         t_pac = dt.now()
-        f = lambda r: agg.program_administrator_cost_test(r, programs, cet_scenario.Settings, cet_scenario.first_year)
+        f = lambda r: mc.program_administrator_cost_test(r, programs, cet_scenario.Settings, cet_scenario.first_year)
         program_administrator_cost_test_results = measures.apply(f, axis='columns')
         cet_scenario.calculation_times['program_administrator_cost_test'] = (dt.now() - t_pac).total_seconds()
 
         measures = measures.merge(program_administrator_cost_test_results,on='CET_ID')
 
         t_rim = dt.now()
-        f = lambda r: agg.ratepayer_impact_measure(r,cet_scenario.RateScheduleElectric,cet_scenario.RateScheduleGas,cet_scenario.Settings,cet_scenario.first_year)
+        f = lambda r: mc.ratepayer_impact_measure(r,cet_scenario.RateScheduleElectric,cet_scenario.RateScheduleGas,cet_scenario.Settings,cet_scenario.first_year)
         ratepayer_impact_measure_results = measures.apply(f, axis='columns')
         cet_scenario.calculation_times['ratepayer_impact_measure'] = (dt.now() - t_pac).total_seconds()
 
@@ -195,7 +197,62 @@ def calculate_program_cost_effectiveness(cet_scenario):
     ### outputs:
     ###     pandas DataFrame with program-level cost-effectiveness outputs
 
-    return pd.DataFrame()
+    # Retrieve output measures with program identifiers from input measures table:
+    OutputMeasures = cet_scenario.InputMeasures.data[['CET_ID','ProgramID']].merge(cet_scenario.OutputMeasures.data, on='CET_ID')
+
+    # Sum all columns grouped by program:
+    OutputPrograms = OutputMeasures.groupby(by='ProgramID').aggregate(np.sum)
+
+    # Replace columns that are not simple sums:
+    OutputPrograms.TotalResourceCostRatio = (
+        OutputPrograms[['ElectricBenefitsNet','GasBenefitsNet']].sum(axis='columns') /
+        OutputPrograms.TotalResourceCostNet
+    )
+    OutputPrograms.TotalResourceCostRatioNoAdmin = (
+        OutputPrograms[['ElectricBenefitsNet','GasBenefitsNet']].sum(axis='columns') /
+        OutputPrograms.TotalResourceCostNetNoAdmin
+    )
+    OutputPrograms.ProgramAdministratorCostRatio = (
+        OutputPrograms[['ElectricBenefitsNet','GasBenefitsNet']].sum(axis='columns') /
+        OutputPrograms.ProgramAdministratorCost
+    )
+    OutputPrograms.ProgramAdministratorCostNoAdmin = (
+        OutputPrograms[['ElectricBenefitsNet','GasBenefitsNet']].sum(axis='columns') /
+        OutputPrograms.ProgramAdministratorCostNoAdmin
+    )
+    return OutputPrograms
+
+def calculate_portfolio_cost_effectiveness(cet_scenario):
+    ### parameters:
+    ###     cet_scenario : an instance of the CETScenario class containing
+    ###         the input data and parameters used in calculating cost
+    ###         effectiveness outputs
+    ###
+    ### outputs:
+    ###     pandas DataFrame with portfolio-level cost-effectiveness outputs
+
+    # Sum all columns:
+    OutputPortfolio = cet_scenario.OutputMeasures.data.aggregate(np.sum, axis='index')
+
+    # Replace columns that are not simple sums:
+    OutputPortfolio.TotalResourceCostRatio = (
+        OutputPortfolio[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
+        OutputPortfolio.TotalResourceCostNet
+    )
+    OutputPortfolio.TotalResourceCostRatioNoAdmin = (
+        OutputPortfolio[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
+        OutputPortfolio.TotalResourceCostNetNoAdmin
+    )
+    OutputPortfolio.ProgramAdministratorCostRatio = (
+        OutputPortfolio[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
+        OutputPortfolio.ProgramAdministratorCost
+    )
+    OutputPortfolio.ProgramAdministratorCostNoAdmin = (
+        OutputPortfolio[['ElectricBenefitsNet','GasBenefitsNet']].sum() /
+        OutputPortfolio.ProgramAdministratorCostNoAdmin
+    )
+
+    return OutputPortfolio
 
 # helper classes to parallelize iteration through measures:
 class Table:
@@ -247,18 +304,20 @@ class MultiprocessingAvoidedCosts(MultiprocessingApplier):
 class MultiprocessingEmissionsReductions(MultiprocessingApplier):
     AvoidedCostElectric = None
     Emissions = None
+    CombustionTypes = None
     Settings = None
     
-    def __init__(self, measures, AvoidedCostElectric, Emissions, Settings, emissions_reductions_function):
+    def __init__(self, measures, AvoidedCostElectric, Emissions, CombustionTypes, Settings, emissions_reductions_function):
         self.set_threads()
         self.dataframe_chunks = np.array_split(measures, self.number_of_threads)
         self.AvoidedCostElectric = AvoidedCostElectric
         self.Emissions = Emissions
+        self.CombustionTypes = CombustionTypes
         self.Settings = Settings
         self.aggregation_function = emissions_reductions_function
 
     def apply_function(self, measure):
-        output = self.aggregation_function(measure, self.AvoidedCostElectric, self.Emissions, self.Settings)
+        output = self.aggregation_function(measure, self.AvoidedCostElectric, self.Emissions, self.CombustionTypes, self.Settings)
         return output
 
 class MultiprocessingCostTest(MultiprocessingApplier):
@@ -318,6 +377,13 @@ class EmissionsTable(MultiprocessingTable):
             (self.data.ClimateZone == measure.ClimateZone)
         )
         return filtered_emissions
+
+class CombustionTypesTable(MultiprocessingTable):
+    def filter_by_measure(self, measure):
+        filtered_combustion_type = self.data.get(
+            self.data.LookupCode == measure.CombustionType
+        )
+        return filtered_combustion_type
 
 class AvoidedCostElectricTable(MultiprocessingTable):
     def filter_by_measure(self, measure):
