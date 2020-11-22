@@ -33,7 +33,7 @@ class EDCS_Connection:
         self.cursor = self.connection.cursor()
     def fetch_sql(self,sql_str):
         print('_' * 80)
-        print('\n< Executing SQL Retreival Script: >\n\n{}\'\n\n< Retrieving ... >'.format(sql_str),end='')
+        print('\n< Executing SQL Retreival Script: >\n\n\'{}\'\n\n< Retrieving ... >'.format(sql_str),end='')
         start_time = datetime.datetime.now()
         results = pd.read_sql_query(sql_str,self.connection)
         end_time = datetime.datetime.today()

@@ -158,9 +158,9 @@ def emissions_reductions_electric(avoided_cost_electric, emissions, measure):
 
     emissions = emissions.iloc[0]
 
-    measure_install = measure.Qi
-    measure_phase_1 = measure.Qi + measure.EULq1
-    measure_phase_2 = measure.Qi + measure.EULq2
+    measure_install = measure.Qi - 1
+    measure_phase_1 = measure.Qi + measure.EULq1 - 1
+    measure_phase_2 = measure.Qi + measure.EULq2 - 1
 
     avoided_cost_quarter = avoided_cost_electric.Qi
 

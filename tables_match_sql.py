@@ -102,6 +102,7 @@ def setup_input_measures(source, source_name, first_year, market_effects_benefit
             'GasSavingsProfile',
             'GasTargetSector',
             'ElectricEndUse',
+            'CombustionType',
         ]
         for nan_column in nan_columns:
             InputMeasures.column_map(nan_column,lambda x: '' if x is np.nan else x)
@@ -357,7 +358,7 @@ def setup_avoided_cost_electric(acc_source, source_name, InputMeasures, user):
             (self.data.ElectricTargetSector == measure.ElectricTargetSector) & \
             (self.data.ElectricEndUse == measure.ElectricEndUse) & \
             (self.data.ClimateZone == measure.ClimateZone) & \
-            (self.data.Qi >= measure.Qi + 1) & \
+            (self.data.Qi >= measure.Qi) & \
             (self.data.Qi < measure.Qi + measure.EULq + 1)
         )
         return filtered_avoided_costs_electric
@@ -473,7 +474,7 @@ def setup_avoided_cost_gas(acc_source, source_name, InputMeasures, user):
             (self.data.ProgramAdministrator == measure.ProgramAdministrator) & \
             (self.data.GasTargetSector == measure.GasTargetSector) & \
             (self.data.GasSavingsProfile == measure.GasSavingsProfile) & \
-            (self.data.Qi >= measure.Qi + 1) & \
+            (self.data.Qi >= measure.Qi) & \
             (self.data.Qi < measure.Qi + measure.EULq + 1)
         )
         return filtered_avoided_costs_gas

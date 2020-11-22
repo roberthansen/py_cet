@@ -94,6 +94,7 @@ def setup_input_measures(source, source_name, first_year, market_effects_benefit
             'GasSavingsProfile',
             'GasTargetSector',
             'ElectricEndUse',
+            'CombustionType',
         ]
         for nan_column in nan_columns:
             InputMeasures.column_map(nan_column,lambda x: '' if x is np.nan else x)
@@ -389,7 +390,7 @@ def setup_combustion_types(source, source_name, InputMeasures, user={}):
                 )
         else:
             lookup_keys = ',\n\t\t'.join(list(dict.fromkeys(
-                [r[1].CombustionType for r in InputMeasures.data.iterrows() if r[1].CombustionType]
+                ['\'' + r[1].CombustionType + '\'' for r in InputMeasures.data.iterrows()]
             )))
             sql_str = '\n\tSELECT *\n\tFROM {}\n\tWHERE LookupCode IN' \
                 '\n\t\t( {} )'.format(source_name,lookup_keys)
