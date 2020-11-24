@@ -51,7 +51,6 @@ class CET_Scenario:
     OutputMeasures = None
     OutputPrograms = None
     OutputPortfolio = None
-    parallelize = False
     calculation_times = {
         'avoided_electric_costs'          : None,
         'avoided_gas_costs'               : None,
@@ -60,6 +59,7 @@ class CET_Scenario:
         'program_administrator_cost_test' : None,
         'ratepayer_impact_measure'        : None,
     }
+    __parallelize__ = False
     __match_sql__ = False
     __tbl__ = None
 
@@ -88,7 +88,7 @@ class CET_Scenario:
         self.first_year = first_year
         self.market_effects_benefits = market_effects_benefits
         self.market_effects_costs = market_effects_costs
-        self.parallelize = parallelize
+        self.set_parallelize(parallelize)
         self.set_match_sql(match_sql)
 
         self.retrieve_all_tables()
@@ -261,6 +261,13 @@ class CET_Scenario:
         self.OutputPrograms.data = calculate_program_cost_effectiveness(self)
         self.OutputPortfolio.data = calculate_portfolio_cost_effectiveness(self)
 
+    def set_parallelize(self,b):
+        self.__parallelize__ = b
+
+    @property
+    def parallelize(self):
+        return self.__parallelize__
+
     def set_match_sql(self,b):
         self.__match_sql__ = b
         if self.__match_sql__:
@@ -268,6 +275,7 @@ class CET_Scenario:
         else:
             self.__tbl__ = tables
 
+    @property
     def match_sql(self):
         return self.__match_sql__
 

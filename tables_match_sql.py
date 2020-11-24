@@ -359,6 +359,7 @@ def setup_avoided_cost_electric(acc_source, source_name, InputMeasures, user):
             (self.data.ElectricEndUse == measure.ElectricEndUse) & \
             (self.data.ClimateZone == measure.ClimateZone) & \
             (self.data.Qi >= measure.Qi) & \
+            #INCLUDE EXTRA QUARTER TO MATCH SQL:
             (self.data.Qi < measure.Qi + measure.EULq + 1)
         )
         return filtered_avoided_costs_electric
@@ -475,6 +476,7 @@ def setup_avoided_cost_gas(acc_source, source_name, InputMeasures, user):
             (self.data.GasTargetSector == measure.GasTargetSector) & \
             (self.data.GasSavingsProfile == measure.GasSavingsProfile) & \
             (self.data.Qi >= measure.Qi) & \
+            #INCLUDE EXTRA QUARTER TO MATCH SQL:
             (self.data.Qi < measure.Qi + measure.EULq + 1)
         )
         return filtered_avoided_costs_gas

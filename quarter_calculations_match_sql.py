@@ -124,12 +124,10 @@ def emissions_reductions_electric(avoided_cost_electric, emissions, measure):
 
     emissions = emissions.iloc[0]
 
-    #INCORRECT QUARTER INDEXING:
     measure_install = measure.Qi
     measure_phase_1 = measure.Qi + measure.EULq1
     measure_phase_2 = measure.Qi + measure.EULq2
 
-    #INCORRECT QUARTER INDEX TO MATCH SQL VERSION OF CET:
     avoided_cost_quarter = avoided_cost_electric.Qi
 
     if measure_install <= avoided_cost_quarter and avoided_cost_quarter <= measure_phase_1 - 1:

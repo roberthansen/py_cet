@@ -23,6 +23,21 @@ cet_scenario = CET_Scenario(
     match_sql=True
 )
 cet_scenario = CET_Scenario(
+    user = user,
+    inputs_source='csv',
+    input_measures_source_name=sample_data_directory + 'InputMeasureCEDARS.csv',
+    input_programs_source_name=sample_data_directory + 'InputProgramCEDARS.csv',
+    acc_source='database',
+    acc_source_directory=sample_data_directory,
+    acc_version=2018,
+    first_year=2018,
+    market_effects_benefits=0.05,
+    market_effects_costs=0.05,
+    parallelize=True,
+    match_sql=True
+)
+'''
+cet_scenario = CET_Scenario(
     user=user,
     inputs_source='database',
     input_measures_source_name='InputMeasureCEDARS',
@@ -49,6 +64,7 @@ cet_scenario = CET_Scenario(
     parallelize=True,
     match_sql=True
 )
+'''
 
 cet_scenario.run_cet()
 
@@ -82,11 +98,9 @@ LEFT JOIN (
         NetPM10Lifecycle,
         GrossPM10Lifecycle
     FROM OutputEmissions
-    WHERE JobID=10000
 ) AS B
 ON A.CET_ID=B.CET_ID_2
 AND A.JobID=B.JobID
-WHERE A.JobID=10000
 ORDER BY
     A.CET_ID''',
     user['id'],
