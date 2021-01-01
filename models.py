@@ -59,7 +59,8 @@ class SQL_Object:
     def column_map(self,column_name,modifier_function):
         self.data[column_name] = self.data[column_name].map(modifier_function)
     def rename_column(self,original_column_name,new_column_name):
-        self.data = self.data.rename(columns={original_column_name:new_column_name},index={})
+        if original_column_name in self.data.columns:
+            self.data = self.data.rename(columns={original_column_name:new_column_name},index={})
     def append_columns(self,data_frame):
         self.data = pd.concat([self.data,data_frame],axis='columns')
 
@@ -139,7 +140,8 @@ class Local_CSV:
     def column_map(self,column_name,modifier_function):
         self.data[column_name] = self.data[column_name].map(modifier_function)
     def rename_column(self,original_column_name,new_column_name):
-        self.data = self.data.rename(columns={original_column_name:new_column_name},index={})
+        if original_column_name in self.data.columns:
+            self.data = self.data.rename(columns={original_column_name:new_column_name},index={})
     def append_columns(self,data_frame):
         self.data = pd.concat([self.data,data_frame],axis='columns')
     def write_file(self):

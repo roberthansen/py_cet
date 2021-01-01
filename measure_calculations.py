@@ -387,11 +387,11 @@ def total_resource_cost_test(measure, programs, Settings, first_year):
     
     # filter programs based on measure, both subtotals for measure's installation quarter and totals for all quarters:
     sum_columns = ['ProgramID','Count','ElectricBenefitsGross','ElectricBenefitsNet','GasBenefitsGross','GasBenefitsNet']
-    program = programs.get(programs.ProgramID == measure.ProgramID)
-    program_total = programs.get(programs.ProgramID == measure.ProgramID)[sum_columns].groupby('ProgramID').aggregate(np.sum).iloc[0]
+    program = programs.loc[(measure.ProgramID,slice(None)]
+    program_total = programs.loc[(measure.ProgramID,slice(None)][sum_columns].groupby('ProgramID').aggregate(np.sum).iloc[0]
 
     # filter settings based on measure:
-    settings = Settings.filter_by_measure(measure).iloc[0]
+    settings = Settings.filter_by_measure(measure)
 
     # get quarterly discount rate for exponentiation:
     quarterly_discount_rate = 1 + settings.DiscountRateQtr

@@ -5,8 +5,8 @@ from login import user
 
 import pandas as pd
 
-sample_data_directory = '/home/rhansen/src/python/sqlserver/py_cet/Tables/'
-acc_source_directory = '/home/rhansen/src/python/sqlserver/py_cet/Tables/'
+sample_data_directory = '/home/rhansen/src/python/sqlserver/PythonCET/UserInputTables/'
+acc_source_directory = '/home/rhansen/src/python/sqlserver/PythonCET/E3Tables/'
 '''
 cet_scenario = CET_Scenario(
     user = {'id':'','passwd':''},
@@ -309,7 +309,7 @@ comparison = pd.DataFrame({
     'PM10NetLifecycle_PercentDiff' : (comparison.PM10NetLifecycle_PY - comparison.PM10NetLifecycle_SQL) / comparison.PM10NetLifecycle_SQL,
 })
 
-comparison.to_csv('Comparison.csv',index=False)
-cet_scenario.InputMeasures.data.to_csv('InputMeasures.csv')
-cet_scenario.InputPrograms.data.to_csv('InputPrograms.csv')
-cet_scenario.Settings.data.to_csv('Settings.csv')
+comparison.to_csv(sample_data_directory+'Comparison.csv',index=False)
+#cet_scenario.InputMeasures.data.to_csv(sample_data_directory+'InputMeasures.csv')
+#cet_scenario.InputPrograms.data.to_csv(sample_data_directory+'InputPrograms.csv')
+#cet_scenario.Settings.data.to_csv(sample_data_directory+'Settings.csv')

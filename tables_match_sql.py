@@ -12,194 +12,110 @@ from login import user
 
 def setup_input_measures(source, source_name, first_year, market_effects_benefits, market_effects_costs, user):
     if source == 'csv':
-        InputMeasures = Local_CSV(source_name, delimiter=',')
+        if source_name == 'Measure.csv':
+            InputMeasures = Local_CSV(source_name, delimiter='|')
+        else:
+            InputMeasures = Local_CSV(source_name, delimiter=',')
     elif source == 'database':
         InputMeasures = EDCS_Table(source_name,user['id'],user['passwd'])
     else:
         InputMeasures = EDCS_Table('InputMeasureCEDARS',user['id'],user['passwd'])
 
     # fix input measure column name and type issues:
-    if source == 'csv':
-        if source_name.find('CEDARS') > 0:
-            column_name_map = [
-                ['CEInputID','CET_ID'],
-                ['PrgID','ProgramID'],
-                ['PA','ProgramAdministrator'],
-                ['MeasDescription','MeasureName'],
-                ['MeasImpactType','MeasureImpactType'],
-                ['E3TargetSector','ElectricTargetSector'],
-                ['E3MeaElecEndUseShape','ElectricEndUse'],
-                ['E3GasSavProfile','GasSavingsProfile'],
-                ['E3GasSector','GasTargetSector'],
-                ['E3ClimateZone','ClimateZone'],
-                ['RateScheduleElec','ElectricRateSchedule'],
-                ['RateScheduleGas','GasRateSchedule'],
-                ['ClaimYearQuarter','InstallationQuarter'],
-                ['NumUnits','Quantity'],
-                ['UnitkW1stBaseline','kW1'],
-                ['UnitkW2ndBaseline','kW2'],
-                ['UnitkWh1stBaseline','kWh1'],
-                ['UnitkWh2ndBaseline','kWh2'],
-                ['UnitTherm1stBaseline','Therm1'],
-                ['UnitTherm2ndBaseline','Therm2'],
-                ['EUL_Yrs','EUL'],
-                ['RUL_Yrs','RUL'],
-                ['InstallationRatekW','IRkW'],
-                ['InstallationRatekWh','IRkWh'],
-                ['InstallationRateTherm','IRTherm'],
-                ['RealizationRatekW','RRkW'],
-                ['RealizationRatekWh','RRkWh'],
-                ['RealizationRateTherm','RRTherm'],
-                ['MeasInflation','AnnualInflationRate'],
-                ['UnitMeaCost1stBaseline','UnitGrossCost1'],
-                ['UnitMeaCost2ndBaseline','UnitGrossCost2'],
-                ['UnitDirectInstallLab','UnitLaborCost'],
-                ['UnitDirectInstallMat','UnitMaterialsCost'],
-            ]
-        else:
-            column_name_map = [
-                ['CEInputID','CET_ID'],
-                ['PrgID','ProgramID'],
-                ['ClaimYearQuarter','InstallationQuarter'],
-                ['Sector','ElectricTargetSector'],
-                ['BldgType','BuildingType'],
-                ['E3ClimateZone','ClimateZone'],
-                ['E3GasSavProfile','GasSavingsProfile'],
-                ['E3GasSector','GasTargetSector'],
-                ['E3MeaElecEndUseShape','ElectricEndUse'],
-                ['MeasAppType','MeasureApplicationType'],
-                ['MeasCode','MeasureCode'],
-                ['TechGroup','TechnologyGroup'],
-                ['TechType','TechnologyType'],
-                ['SourceDesc','SourceDescription'],
-                ['NumUnits','Quantity'],
-                ['UnitkW1stBaseline','kW1'],
-                ['UnitkWh1stBaseline','kWh1'],
-                ['UnitTherm1stBaseline','Therm1'],
-                ['UnitkW2ndBaseline','kW2'],
-                ['UnitkWh2ndBaseline','kWh2'],
-                ['UnitTherm2ndBaseline','Therm2'],
-                ['EUL_Yrs','EUL'],
-                ['RUL_Yrs','RUL'],
-                ['RealizationRatekW','RRkW'],
-                ['RealizationRatekWh','RRkWh'],
-                ['RealizationRateTherm','RRTherm'],
-                ['InstallationRatekW','IRkW'],
-                ['InstallationRatekWh','IRkWh'],
-                ['InstallationRateTherm','IRTherm'],
-                ['UnitMeaCost1stBaseline','UnitGrossCost1'],
-                ['UnitMeaCost2ndBaseline','UnitGrossCost2'],
-                ['UnitDirectInstallLab','UnitLaborCost'],
-                ['UnitDirectInstallMat','UnitMaterialsCost'],
-                ['PA','ProgramAdministrator'],
-                ['MeasInflation','AnnualInflationRate'],
-            ]
-        for old_name,new_name in column_name_map:
-            InputMeasures.rename_column(old_name,new_name)
+    column_name_map = [
+        ['BldgType','BuildingType'],
+        ['CEInputID','CET_ID'],
+        ['ClaimYearQuarter','InstallationQuarter'],
+        ['ClimateZone','ClimateZone'],
+        ['DILaborCost','UnitLaborCost'],
+        ['DIMaterialCost','UnitMaterialsCost'],
+        ['E3ClimateZone','ClimateZone'],
+        ['E3GasSavProfile','GasSavingsProfile'],
+        ['E3GasSector','GasTargetSector'],
+        ['E3MeaElecEndUseShape','ElectricEndUse'],
+        ['E3TargetSector','ElectricTargetSector'],
+        ['EUL_Yrs','EUL'],
+        ['ElecEndUseShape','ElectricEndUse'],
+        ['ElecRateSchedule','ElectricRateSchedule'],
+        ['ElecTargetSector','ElectricTargetSector'],
+        ['EndUserRebate','UnitEndUserRebate'],
+        ['GasSector','GasTargetSector'],
+        ['IRThm','IRTherm'],
+        ['IncentiveToOthers','UnitIncentiveToOthers'],
+        ['InstallationRateTherm','IRTherm'],
+        ['InstallationRatekW','IRkW'],
+        ['InstallationRatekWh','IRkWh'],
+        ['MarketEffectBens','MarketEffectsBenefits'],
+        ['MarketEffectCost','MarketEffectsCosts'],
+        ['MeasAppType','MeasureApplicationType'],
+        ['MeasCode','MeasureCode'],
+        ['MeasDescription','MeasureDescription'],
+        ['MeasImpactType','ImpactType'],
+        ['MeasInflation','AnnualInflationRate'],
+        ['NTGRThm','NTGRTherm'],
+        ['NormUnit','NormalizingUnits'],
+        ['NumUnits','Quantity'],
+        ['PA','ProgramAdministrator'],
+        ['PreDesc','PreInterventionDescription'],
+        ['PrgID','ProgramID'],
+        ['Qty','Quantity'],
+        ['RRThm','RRTherm'],
+        ['RUL_Yrs','RUL'],
+        ['RateScheduleElec','ElectricRateSchedule'],
+        ['RateScheduleGas','GasRateSchedule'],
+        ['RealizationRateTherm','RRTherm'],
+        ['RealizationRatekW','RRkW'],
+        ['RealizationRatekWh','RRkWh'],
+        ['Residential_Flag','ResidentialFlag'],
+        ['SourceDesc','ExAnteSourceDescription'],
+        ['StdDesc','StandardDescription'],
+        ['TechGroup','TechnologyGroup'],
+        ['TechType','TechnologyType'],
+        ['UESThm','Therm1'],
+        ['UESThm_ER','Therm2'],
+        ['UESkW','kW1'],
+        ['UESkW_ER','kW2'],
+        ['UESkWh','kWh1'],
+        ['UESkWh_ER','kWh2'],
+        ['UnitDirectInstallLab','UnitLaborCost'],
+        ['UnitDirectInstallMat','UnitMaterialsCost'],
+        ['UnitMeaCost1stBaseline','UnitGrossCost1'],
+        ['UnitMeaCost2ndBaseline','UnitGrossCost2'],
+        ['UnitMeasureGrossCost','UnitGrossCost1'],
+        ['UnitMeasureGrossCost_ER','UnitGrossCost2'],
+        ['UnitTherm1stBaseline','Therm1'],
+        ['UnitTherm2ndBaseline','Therm2'],
+        ['UnitkW1stBaseline','kW1'],
+        ['UnitkW2ndBaseline','kW2'],
+        ['UnitkWh1stBaseline','kWh1'],
+        ['UnitkWh2ndBaseline','kWh2'],
+        ['Upstream_Flag','UpstreamFlag'],
+        ['Version','DEERVersion'],
+    ]
+    for old_name,new_name in column_name_map:
+        InputMeasures.rename_column(old_name,new_name)
 
-        nan_columns = [
-            'ElectricTargetSector',
-            'GasSavingsProfile',
-            'GasTargetSector',
-            'ElectricEndUse',
-            'CombustionType',
-        ]
-        for nan_column in nan_columns:
-            InputMeasures.column_map(nan_column,lambda x: '' if x is np.nan else x)
+    # Set values for missing columns:
+    if 'ImpactType' not in InputMeasures.data.columns:
+        new_column = {'ImpactType':[''] * InputMeasures.data.CET_ID.count()}
+        InputMeasures.append_columns(new_column)
+    if 'AnnualInflationRate' not in InputMeasures.data.columns:
+        new_column = {'AnnualInflationRate':[0] * InputMeasures.data.CET_ID.count()}
+        InputMeasures.append_columns(new_column)
 
-    # fix input measure column name and type issues:
-    else:
-        if source_name == 'InputMeasure':
-            column_name_map = [
-                ['PrgID','ProgramID'],
-                ['PA','ProgramAdministrator'],
-                ['ElecTargetSector','ElectricTargetSector'],
-                ['GasSector','GasTargetSector'],
-                ['ElecEndUseShape','ElectricEndUse'],
-                ['ClimateZone','ClimateZone'],
-                ['ElecRateSchedule','ElectricRateSchedule'],
-                ['ClaimYearQuarter','InstallationQuarter'],
-                ['Qty','Quantity'],
-                ['UESkW','kW1'],
-                ['UESkW_ER','kW2'],
-                ['UESkWh','kWh1'],
-                ['UESkWh_ER','kWh2'],
-                ['UESThm','Therm1'],
-                ['UESThm_ER','Therm2'],
-                ['IRThm','IRTherm'],
-                ['RRThm','RRTherm'],
-                ['NTGRThm','NTGRTherm'],
-                ['MarketEffectBens','MarketEffectsBenefits'],
-                ['MarketEffectCost','MarketEffectsCosts'],
-                ['UnitMeasureGrossCost','UnitGrossCost1'],
-                ['UnitMeasureGrossCost_ER','UnitGrossCost2'],
-                ['EndUserRebate','UnitEndUserRebate'],
-                ['IncentiveToOthers','UnitIncentiveToOthers'],
-                ['DILaborCost','UnitLaborCost'],
-                ['DIMaterialCost','UnitMaterialsCost'],
-                ['UnitMeaCost1stBaseline','UnitGrossCost1'],
-                ['UnitMeaCost2ndBaseline','UnitGrossCost2'],
-                ['UnitDirectInstallLab','UnitLaborCost'],
-                ['UnitDirectInstallMat','UnitMaterialsCost'],
-            ]
-            for old_name,new_name in column_name_map:
-                InputMeasures.rename_column(old_name,new_name)
-            new_columns = pd.DataFrame({
-                'ImpactType'          : [''] * InputMeasures.data.CET_ID.count(),
-                'AnnualInflationRate' : [0] * InputMeasures.data.CET_ID.count(),
-            })
-            InputMeasures.append_columns(new_columns)
-
-        elif source_name.find('CEDARS') > 0:
-            column_name_map = [
-                ['CEInputID','CET_ID'],
-                ['PrgID','ProgramID'],
-                ['PA','ProgramAdministrator'],
-                ['MeasDescription','MeasureName'],
-                ['MeasImpactType','MeasureImpactType'],
-                ['E3TargetSector','ElectricTargetSector'],
-                ['E3MeaElecEndUseShape','ElectricEndUse'],
-                ['E3GasSavProfile','GasSavingsProfile'],
-                ['E3GasSector','GasTargetSector'],
-                ['E3ClimateZone','ClimateZone'],
-                ['RateScheduleElec','ElectricRateSchedule'],
-                ['RateScheduleGas','GasRateSchedule'],
-                ['ClaimYearQuarter','InstallationQuarter'],
-                ['NumUnits','Quantity'],
-                ['UnitkW1stBaseline','kW1'],
-                ['UnitkW2ndBaseline','kW2'],
-                ['UnitkWh1stBaseline','kWh1'],
-                ['UnitkWh2ndBaseline','kWh2'],
-                ['UnitTherm1stBaseline','Therm1'],
-                ['UnitTherm2ndBaseline','Therm2'],
-                ['EUL_Yrs','EUL'],
-                ['RUL_Yrs','RUL'],
-                ['InstallationRatekW','IRkW'],
-                ['InstallationRatekWh','IRkWh'],
-                ['InstallationRateTherm','IRTherm'],
-                ['RealizationRatekW','RRkW'],
-                ['RealizationRatekWh','RRkWh'],
-                ['RealizationRateTherm','RRTherm'],
-                ['MeasInflation','AnnualInflationRate'],
-                ['UnitMeaCost1stBaseline','UnitGrossCost1'],
-                ['UnitMeaCost2ndBaseline','UnitGrossCost2'],
-                ['UnitDirectInstallLab','UnitLaborCost'],
-                ['UnitDirectInstallMat','UnitMaterialsCost'],
-            ]
-            for old_name,new_name in column_name_map:
-                InputMeasures.rename_column(old_name,new_name)
-
+    InputMeasures.column_map('ClimateZone',lambda s: str(s).upper())
+    InputMeasures.column_map('ElectricEndUse',lambda s: s.upper())
     InputMeasures.column_map('ElectricTargetSector',lambda s: s.upper())
-    InputMeasures.column_map('GasTargetSector',lambda s: s or '')
-    InputMeasures.column_map('GasTargetSector',lambda s: s.upper())
     InputMeasures.column_map('GasSavingsProfile',lambda s: s or '')
     InputMeasures.column_map('GasSavingsProfile',lambda s: s.upper())
-    InputMeasures.column_map('ElectricEndUse',lambda s: s.upper())
-    InputMeasures.column_map('ClimateZone',lambda s: str(s).upper())
+    InputMeasures.column_map('GasTargetSector',lambda s: s or '')
+    InputMeasures.column_map('GasTargetSector',lambda s: s.upper())
 
-    #INCORRECT OVERWRITE MEASURE-LEVEL MARKET EFFECTS TO MATCH SQL:
+    #INCORRECT OVERWRITE MEASURE-LEVEL MARKET EFFECTS BENEFITS TO MATCH SQL:
     InputMeasures.data.MarketEffectsBenefits = market_effects_benefits
-    InputMeasures.column_map('MarketEffectsCosts', lambda x: market_effects_costs if x is None else x)
+
+    f = lambda x: market_effects_costs if x is None else x
+    InputMeasures.column_map('MarketEffectsCosts', f)
 
     # helper function to calculate additional columns for input measure table:
     def input_measure_calculated_columns(data_frame_row):
@@ -227,14 +143,24 @@ def setup_input_measures(source, source_name, first_year, market_effects_benefit
     # append input measures with calculated columns:
     InputMeasures.append_columns(InputMeasures.data.apply(input_measure_calculated_columns, axis='columns', result_type='expand'))
 
-    nan_columns = ['Quantity','EUL','RUL','NTGRkW','NTGRkWh','NTGRTherm',
+    nan_to_num_columns = ['Quantity','EUL','RUL','NTGRkW','NTGRkWh','NTGRTherm',
         'NTGRCost','IRkW','IRkWh','IRTherm','AnnualInflationRate','RRkW',
         'RRkWh','RRTherm','MarketEffectsBenefits','MarketEffectsCosts','kW1',
         'kW2','kWh1','kWh2','Therm1','Therm2','UnitGrossCost1','UnitGrossCost2',
         'UnitLaborCost','UnitMaterialsCost','UnitEndUserRebate',
         'UnitIncentiveToOthers','EULq1','EULq2','RULq','EULq']
-    for nan_column in nan_columns:
-        InputMeasures.column_map(nan_column,np.nan_to_num)
+    for column in nan_to_num_columns:
+        InputMeasures.column_map(column,np.nan_to_num)
+
+    nan_to_str_columns = [
+        'ElectricTargetSector',
+        'GasSavingsProfile',
+        'GasTargetSector',
+        'ElectricEndUse',
+        'CombustionType',
+    ]
+    for column in nan_to_str_columns:
+        InputMeasures.column_map(column,lambda x: '' if x is np.nan else x)
 
     return InputMeasures
 
